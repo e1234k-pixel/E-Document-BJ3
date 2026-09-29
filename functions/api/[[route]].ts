@@ -787,17 +787,131 @@ app.get('/notifications', async (c) => {
   }
 });
 
-app.put('/notifications/:id/read', async (c) => {
+// ==========================================
+// 9. Admin User Management (เพิ่ม/แก้ไข/ลบ/นำเข้าครู)
+// ==========================================
+app.post('/admin/users', async (c) => {
+  try {
+    const db = c.env.DB;
+    const body = await c.req.json();
+    const {
+      username,
+      password = 'password123',
+      title = 'ครู',
+      name,
+      email = '',
+      phone = '',
+      role = 'teacher',
+      department_id,
+      status = 'active'
+    } = body;
+
+    if (!username || !name) {
+      return c.json({ error: 'กรุณากรอกชื่อและ Username ให้ครบถ้วน' }, 400);
+    }
+
+    // Check unique username
+    const existing = await db.prepare('SELECT id FROM users WHERE username = ?').bind(username).first();
+    if (existing) {
+      return c.json({ error: `Username "${username}" มีในระบบแล้ว กรุณาใช้ชื่ออื่น` }, 400);
+    }
+
+    const res = await db.prepare(`
+      INSERT INTO users (username, password_hash, title, name, email, phone, role, department_id, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(username, password, title, name, email, phone, role, department_id ? Number(department_id) : null, status).run();
+
+    return c.json({ success: true, id: res.meta.last_row_id });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+app.post('/admin/users/bulk', async (c) => {
+  try {
+    const db = c.env.DB;
+    const { users } = await c.req.json();
+    if (!Array.isArray(users) || users.length === 0) {
+      return c.json({ error: 'ไม่พบข้อมูลครูที่ต้องการนำเข้า' }, 400);
+    }
+
+    let insertedCount = 0;
+    const errors: string[] = [];
+
+    for (const u of users) {
+      try {
+        if (!u.name || !u.name.trim()) continue;
+        const username = u.username ? u.username.trim() : `teacher_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        const password = u.password || '123456';
+        const title = u.title || 'ครู';
+        const role = u.role || 'teacher';
+        const deptId = u.department_id ? Number(u.department_id) : null;
+        const email = u.email || '';
+        const phone = u.phone || '';
+
+        // Check existing
+        const exist = await db.prepare('SELECT id FROM users WHERE username = ?').bind(username).first();
+        if (exist) {
+          errors.push(`Username ${username} ซ้ำ ข้ามการนำเข้า`);
+          continue;
+        }
+
+        await db.prepare(`
+          INSERT INTO users (username, password_hash, title, name, email, phone, role, department_id, status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')
+        `).bind(username, password, title, u.name.trim(), email, phone, role, deptId).run();
+
+        insertedCount++;
+      } catch (e: any) {
+        errors.push(`ครู ${u.name}: ${e.message}`);
+      }
+    }
+
+    return c.json({ success: true, insertedCount, errors });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+app.put('/admin/users/:id', async (c) => {
   try {
     const id = c.req.param('id');
     const db = c.env.DB;
+    const body = await c.req.json();
+    const { title, name, username, password, email, phone, role, department_id, status } = body;
 
-    await db.prepare('UPDATE notifications SET read_status = 1 WHERE id = ?').bind(id).run();
+    let query = `
+      UPDATE users 
+      SET title = ?, name = ?, username = ?, email = ?, phone = ?, role = ?, department_id = ?, status = ?
+    `;
+    const params: any[] = [title, name, username, email, phone, role, department_id ? Number(department_id) : null, status];
+
+    if (password && password.trim()) {
+      query += `, password_hash = ?`;
+      params.push(password.trim());
+    }
+
+    query += ` WHERE id = ?`;
+    params.push(id);
+
+    await db.prepare(query).bind(...params).run();
     return c.json({ success: true });
   } catch (err: any) {
     return c.json({ error: err.message }, 500);
   }
 });
+
+app.delete('/admin/users/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const db = c.env.DB;
+    await db.prepare('DELETE FROM users WHERE id = ?').bind(id).run();
+    return c.json({ success: true });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
 
 // Cloudflare Pages Functions Handler
 export const onRequest = async (context: any) => {

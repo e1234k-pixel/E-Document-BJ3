@@ -35,6 +35,56 @@ export const api = {
     return res.json();
   },
 
+  async createUser(data: Partial<User> & { password?: string }): Promise<{ success: boolean; id: number }> {
+    const res = await fetch(`${API_BASE}/admin/users`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err: any = await res.json().catch(() => ({ error: 'ไม่สามารถเพิ่มผู้ใช้งานได้' }));
+      throw new Error(err?.error || 'ไม่สามารถเพิ่มผู้ใช้งานได้');
+    }
+    return res.json();
+  },
+
+  async bulkCreateUsers(users: Array<Partial<User> & { password?: string }>): Promise<{ success: boolean; insertedCount: number; errors: string[] }> {
+    const res = await fetch(`${API_BASE}/admin/users/bulk`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ users })
+    });
+    if (!res.ok) {
+      const err: any = await res.json().catch(() => ({ error: 'ไม่สามารถนำเข้ารายชื่อได้' }));
+      throw new Error(err?.error || 'ไม่สามารถนำเข้ารายชื่อได้');
+    }
+    return res.json();
+  },
+
+  async updateUser(id: number, data: Partial<User> & { password?: string }): Promise<{ success: boolean }> {
+    const res = await fetch(`${API_BASE}/admin/users/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err: any = await res.json().catch(() => ({ error: 'ไม่สามารถแก้ไขข้อมูลผู้ใช้งานได้' }));
+      throw new Error(err?.error || 'ไม่สามารถแก้ไขข้อมูลผู้ใช้งานได้');
+    }
+    return res.json();
+  },
+
+  async deleteUser(id: number): Promise<{ success: boolean }> {
+    const res = await fetch(`${API_BASE}/admin/users/${id}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) {
+      const err: any = await res.json().catch(() => ({ error: 'ไม่สามารถลบผู้ใช้งานได้' }));
+      throw new Error(err?.error || 'ไม่สามารถลบผู้ใช้งานได้');
+    }
+    return res.json();
+  },
+
   // Departments
   async getDepartments(): Promise<Department[]> {
     const res = await fetch(`${API_BASE}/departments`);
