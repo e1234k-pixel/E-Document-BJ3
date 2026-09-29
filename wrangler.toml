@@ -1,0 +1,9 @@
+name = "academic-submission-system"
+compatibility_date = "2024-04-01"
+pages_build_output_dir = "./dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "academic-db"
+database_id = "7753a573-d4f3-4d52-9fc5-efcf3d21c613"
+migrations_dir = "migrations"
