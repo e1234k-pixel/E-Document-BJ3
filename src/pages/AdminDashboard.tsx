@@ -22,7 +22,11 @@ import {
   X,
   FileSpreadsheet,
   AlertCircle,
-  Sparkles
+  Sparkles,
+  CheckSquare,
+  Square,
+  SlidersHorizontal,
+  Check
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
@@ -55,6 +59,19 @@ export const AdminDashboard: React.FC = () => {
   const [parsedUsers, setParsedUsers] = useState<Array<Partial<User> & { password?: string }>>([]);
   const [isImporting, setIsImporting] = useState<boolean>(false);
   const [importResult, setImportResult] = useState<{ count: number; errors: string[] } | null>(null);
+
+  // Bulk Selection & Edit State
+  const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+  const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState<boolean>(false);
+  const [bulkEditDeptEnabled, setBulkEditDeptEnabled] = useState<boolean>(false);
+  const [bulkEditDeptId, setBulkEditDeptId] = useState<number>(1);
+  const [bulkEditRoleEnabled, setBulkEditRoleEnabled] = useState<boolean>(false);
+  const [bulkEditRole, setBulkEditRole] = useState<UserRole>('teacher');
+  const [bulkEditStatusEnabled, setBulkEditStatusEnabled] = useState<boolean>(false);
+  const [bulkEditStatus, setBulkEditStatus] = useState<'active' | 'inactive'>('active');
+  const [bulkEditPasswordEnabled, setBulkEditPasswordEnabled] = useState<boolean>(false);
+  const [bulkEditPassword, setBulkEditPassword] = useState<string>('123456');
+  const [isSavingBulkEdit, setIsSavingBulkEdit] = useState<boolean>(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -164,16 +181,103 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  // Delete User
+  // Delete User (Single)
   const handleDeleteUser = async (u: User) => {
-    if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบบัญชี "${u.title}${u.name}" (${u.username})?`)) {
+    if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบบัญชี "${u.title}${u.name}" (${u.username})?\n\n(หากมีเอกสารหรือการตรวจที่เกี่ยวข้อง จะถูกลบออกอย่างปลอดภัยเพื่อไม่ให้ติด Foreign Key)`)) {
       try {
         await api.deleteUser(u.id);
+        setSelectedUserIds((prev) => prev.filter((id) => id !== u.id));
         await refreshUsers();
         alert('ลบบัญชีผู้ใช้งานเรียบร้อยแล้ว');
       } catch (err: any) {
         alert(err.message || 'ไม่สามารถลบผู้ใช้งานได้');
       }
+    }
+  };
+
+  // Toggle user selection
+  const handleToggleSelectAll = () => {
+    if (selectedUserIds.length === filteredUsers.length && filteredUsers.length > 0) {
+      setSelectedUserIds([]);
+    } else {
+      setSelectedUserIds(filteredUsers.map((u) => u.id));
+    }
+  };
+
+  const handleToggleUser = (id: number) => {
+    setSelectedUserIds((prev) =>
+      prev.includes(id) ? prev.filter((uid) => uid !== id) : [...prev, id]
+    );
+  };
+
+  // Bulk Delete
+  const handleBulkDelete = async () => {
+    if (selectedUserIds.length === 0) return;
+    if (
+      !confirm(
+        `⚠️ ยืนยันการลบบัญชีผู้ใช้งานที่เลือกจำนวน ${selectedUserIds.length} คน ใช่หรือไม่?\n\n(ข้อมูลเอกสารและการตั้งค่าทั้งหมดที่เกี่ยวข้องกับผู้ใช้เหล่านี้จะถูกลบออกอย่างสมบูรณ์)`
+      )
+    ) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await api.bulkDeleteUsers(selectedUserIds);
+      alert(`ลบผู้ใช้งานจำนวน ${selectedUserIds.length} คน เรียบร้อยแล้ว`);
+      setSelectedUserIds([]);
+      await refreshUsers();
+    } catch (err: any) {
+      alert(err.message || 'ไม่สามารถลบผู้ใช้งานหลายคนได้');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Open Bulk Edit Modal
+  const handleOpenBulkEdit = () => {
+    if (selectedUserIds.length === 0) {
+      alert('กรุณาเลือกผู้ใช้งานที่ต้องการแก้ไขอย่างน้อย 1 คน');
+      return;
+    }
+    setBulkEditDeptEnabled(false);
+    setBulkEditDeptId(departments[0]?.id || 1);
+    setBulkEditRoleEnabled(false);
+    setBulkEditRole('teacher');
+    setBulkEditStatusEnabled(false);
+    setBulkEditStatus('active');
+    setBulkEditPasswordEnabled(false);
+    setBulkEditPassword('123456');
+    setIsBulkEditModalOpen(true);
+  };
+
+  // Save Bulk Edit
+  const handleSaveBulkEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedUserIds.length === 0) return;
+    if (!bulkEditDeptEnabled && !bulkEditRoleEnabled && !bulkEditStatusEnabled && !bulkEditPasswordEnabled) {
+      alert('กรุณาติ๊กเลือกอย่างน้อย 1 หัวข้อที่ต้องการแก้ไขพร้อมกัน');
+      return;
+    }
+
+    setIsSavingBulkEdit(true);
+    try {
+      await api.bulkUpdateUsers({
+        user_ids: selectedUserIds,
+        department_id: bulkEditDeptEnabled ? bulkEditDeptId : undefined,
+        role: bulkEditRoleEnabled ? bulkEditRole : undefined,
+        status: bulkEditStatusEnabled ? bulkEditStatus : undefined,
+        password: bulkEditPasswordEnabled ? bulkEditPassword : undefined,
+      });
+
+      alert(`แก้ไขข้อมูลผู้ใช้งานจำนวน ${selectedUserIds.length} คน เรียบร้อยแล้ว`);
+      setIsBulkEditModalOpen(false);
+      setSelectedUserIds([]);
+      await refreshUsers();
+    } catch (err: any) {
+      alert(err.message || 'บันทึกการแก้ไขไม่สำเร็จ');
+    } finally {
+      setIsSavingBulkEdit(false);
     }
   };
 
@@ -428,11 +532,54 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
 
+          {/* Bulk Selection Action Bar */}
+          {selectedUserIds.length > 0 && (
+            <div className="p-3.5 bg-blue-50/90 border border-blue-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fadeIn">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-ping" />
+                <span className="text-xs font-bold text-blue-900">
+                  เลือกอยู่ {selectedUserIds.length} รายการ (จากทั้งหมด {filteredUsers.length} คน)
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={handleOpenBulkEdit}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm transition active:scale-95"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  <span>แก้ไขข้อมูลที่เลือก ({selectedUserIds.length})</span>
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-sm transition active:scale-95"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>ลบที่เลือก ({selectedUserIds.length})</span>
+                </button>
+                <button
+                  onClick={() => setSelectedUserIds([])}
+                  className="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-xs font-semibold transition"
+                >
+                  ล้างการเลือก
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
               <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                 <tr>
-                  <th className="px-4 py-3">#</th>
+                  <th className="w-10 px-3 py-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={filteredUsers.length > 0 && selectedUserIds.length === filteredUsers.length}
+                      onChange={handleToggleSelectAll}
+                      className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      title="เลือกทั้งหมด / ยกเลิกทั้งหมด"
+                    />
+                  </th>
+                  <th className="px-3 py-3">#</th>
                   <th className="px-4 py-3">ชื่อ - นามสกุล</th>
                   <th className="px-4 py-3">Username</th>
                   <th className="px-4 py-3">บทบาท (Role)</th>
@@ -443,59 +590,73 @@ export const AdminDashboard: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredUsers.map((u, idx) => (
-                  <tr key={u.id} className="hover:bg-slate-50/70 transition">
-                    <td className="px-4 py-3 text-slate-400 font-mono">{idx + 1}</td>
-                    <td className="px-4 py-3 font-bold text-slate-900">
-                      {u.title}{u.name}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 font-mono text-[11px]">{u.username}</td>
-                    <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700">
-                        {u.role === 'teacher' && 'ครูผู้สอน'}
-                        {u.role === 'department_head' && 'หัวหน้ากลุ่มสาระ'}
-                        {u.role === 'academic' && 'ฝ่ายวิชาการ'}
-                        {u.role === 'executive' && 'ผู้บริหาร'}
-                        {u.role === 'admin' && 'ผู้ดูแลระบบ'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {u.department_name ? u.department_name.replace('กลุ่มสาระการเรียนรู้', '') : '-'}
-                    </td>
-                    <td className="px-4 py-3 text-slate-500 font-mono text-[11px]">
-                      {u.phone || '-'}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {u.status === 'active' ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 font-semibold">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>ใช้งาน</span>
+                {filteredUsers.map((u, idx) => {
+                  const isSelected = selectedUserIds.includes(u.id);
+                  return (
+                    <tr
+                      key={u.id}
+                      className={`transition ${isSelected ? 'bg-blue-50/70 font-medium' : 'hover:bg-slate-50/70'}`}
+                    >
+                      <td className="px-3 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleUser(u.id)}
+                          className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-3 py-3 text-slate-400 font-mono text-[11px]">{idx + 1}</td>
+                      <td className="px-4 py-3 font-bold text-slate-900">
+                        {u.title}{u.name}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 font-mono text-[11px]">{u.username}</td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700">
+                          {u.role === 'teacher' && 'ครูผู้สอน'}
+                          {u.role === 'department_head' && 'หัวหน้ากลุ่มสาระ'}
+                          {u.role === 'academic' && 'ฝ่ายวิชาการ'}
+                          {u.role === 'executive' && 'ผู้บริหาร'}
+                          {u.role === 'admin' && 'ผู้ดูแลระบบ'}
                         </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] text-rose-500 font-semibold">
-                          <XCircle className="w-3.5 h-3.5" />
-                          <span>ระงับ</span>
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right space-x-1 whitespace-nowrap">
-                      <button
-                        onClick={() => handleOpenEditUser(u)}
-                        className="p-1.5 rounded-lg border border-slate-200 text-blue-600 hover:bg-blue-50 transition"
-                        title="แก้ไขข้อมูล"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteUser(u)}
-                        className="p-1.5 rounded-lg border border-slate-200 text-rose-600 hover:bg-rose-50 transition"
-                        title="ลบบัญชี"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {u.department_name ? u.department_name.replace('กลุ่มสาระการเรียนรู้', '') : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-slate-500 font-mono text-[11px]">
+                        {u.phone || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {u.status === 'active' ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 font-semibold">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>ใช้งาน</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-rose-500 font-semibold">
+                            <XCircle className="w-3.5 h-3.5" />
+                            <span>ระงับ</span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right space-x-1 whitespace-nowrap">
+                        <button
+                          onClick={() => handleOpenEditUser(u)}
+                          className="p-1.5 rounded-lg border border-slate-200 text-blue-600 hover:bg-blue-50 transition"
+                          title="แก้ไขข้อมูล"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(u)}
+                          className="p-1.5 rounded-lg border border-slate-200 text-rose-600 hover:bg-rose-50 transition"
+                          title="ลบบัญชี"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -854,6 +1015,151 @@ export const AdminDashboard: React.FC = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Modal 3: Bulk Edit Users */}
+      {isBulkEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
+            <div className="px-6 py-5 bg-slate-900 text-white flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-base flex items-center gap-2">
+                  <Edit2 className="w-4 h-4 text-blue-400" />
+                  <span>แก้ไขข้อมูลผู้ใช้พร้อมกัน (Bulk Edit)</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  เลือกอยู่ {selectedUserIds.length} คน (ติ๊กเลือกหัวข้อที่ต้องการปรับเปลี่ยน)
+                </p>
+              </div>
+              <button
+                onClick={() => setIsBulkEditModalOpen(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveBulkEdit} className="p-6 space-y-4 text-xs">
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-800">
+                💡 <strong>คำแนะนำ:</strong> ติ๊กเครื่องหมายถูกเฉพาะหัวข้อที่คุณต้องการปรับเปลี่ยนพร้อมกัน ระบบจะอัปเดตเฉพาะหัวข้อที่ถูกติ๊กเท่านั้น
+              </div>
+
+              {/* Field 1: Department */}
+              <div className={`p-3.5 rounded-2xl border transition ${bulkEditDeptEnabled ? 'bg-blue-50/50 border-blue-300' : 'bg-slate-50 border-slate-200'}`}>
+                <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={bulkEditDeptEnabled}
+                    onChange={(e) => setBulkEditDeptEnabled(e.target.checked)}
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span>1. ย้ายกลุ่มสาระการเรียนรู้</span>
+                </label>
+                <select
+                  disabled={!bulkEditDeptEnabled}
+                  value={bulkEditDeptId}
+                  onChange={(e) => setBulkEditDeptId(Number(e.target.value))}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 bg-white disabled:bg-slate-100 disabled:text-slate-400 font-medium cursor-pointer"
+                >
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Field 2: Role */}
+              <div className={`p-3.5 rounded-2xl border transition ${bulkEditRoleEnabled ? 'bg-blue-50/50 border-blue-300' : 'bg-slate-50 border-slate-200'}`}>
+                <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={bulkEditRoleEnabled}
+                    onChange={(e) => setBulkEditRoleEnabled(e.target.checked)}
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span>2. เปลี่ยนบทบาท (Role)</span>
+                </label>
+                <select
+                  disabled={!bulkEditRoleEnabled}
+                  value={bulkEditRole}
+                  onChange={(e) => setBulkEditRole(e.target.value as UserRole)}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 bg-white disabled:bg-slate-100 disabled:text-slate-400 font-medium cursor-pointer"
+                >
+                  <option value="teacher">ครูผู้สอน</option>
+                  <option value="department_head">หัวหน้ากลุ่มสาระฯ (ส่งงาน + ตรวจกลุ่มสาระ)</option>
+                  <option value="academic">ฝ่ายวิชาการ</option>
+                  <option value="executive">ผู้บริหาร</option>
+                  <option value="admin">ผู้ดูแลระบบ</option>
+                </select>
+              </div>
+
+              {/* Field 3: Status */}
+              <div className={`p-3.5 rounded-2xl border transition ${bulkEditStatusEnabled ? 'bg-blue-50/50 border-blue-300' : 'bg-slate-50 border-slate-200'}`}>
+                <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={bulkEditStatusEnabled}
+                    onChange={(e) => setBulkEditStatusEnabled(e.target.checked)}
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span>3. เปลี่ยนสถานะการใช้งาน (Status)</span>
+                </label>
+                <select
+                  disabled={!bulkEditStatusEnabled}
+                  value={bulkEditStatus}
+                  onChange={(e) => setBulkEditStatus(e.target.value as 'active' | 'inactive')}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 bg-white disabled:bg-slate-100 disabled:text-slate-400 font-medium cursor-pointer"
+                >
+                  <option value="active">เปิดใช้งาน (Active)</option>
+                  <option value="inactive">ระงับการใช้งาน (Inactive)</option>
+                </select>
+              </div>
+
+              {/* Field 4: Reset Password */}
+              <div className={`p-3.5 rounded-2xl border transition ${bulkEditPasswordEnabled ? 'bg-blue-50/50 border-blue-300' : 'bg-slate-50 border-slate-200'}`}>
+                <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={bulkEditPasswordEnabled}
+                    onChange={(e) => setBulkEditPasswordEnabled(e.target.checked)}
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span>4. รีเซ็ตรหัสผ่านใหม่ให้กับทุกคนที่เลือก (Reset Password)</span>
+                </label>
+                <input
+                  type="text"
+                  disabled={!bulkEditPasswordEnabled}
+                  value={bulkEditPassword}
+                  onChange={(e) => setBulkEditPassword(e.target.value)}
+                  placeholder="เช่น 123456"
+                  className="w-full p-2.5 rounded-xl border border-slate-300 font-mono disabled:bg-slate-100 disabled:text-slate-400"
+                />
+              </div>
+
+              <div className="pt-3 flex items-center justify-between border-t border-slate-100">
+                <span className="text-slate-500">
+                  กำลังจะอัปเดต <strong className="text-blue-600">{selectedUserIds.length}</strong> คน
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsBulkEditModalOpen(false)}
+                    className="px-4 py-2 font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingBulkEdit || (!bulkEditDeptEnabled && !bulkEditRoleEnabled && !bulkEditStatusEnabled && !bulkEditPasswordEnabled)}
+                    className="px-5 py-2 font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow disabled:opacity-50 transition"
+                  >
+                    {isSavingBulkEdit ? 'กำลังบันทึก...' : `บันทึกการแก้ไข (${selectedUserIds.length})`}
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
       )}

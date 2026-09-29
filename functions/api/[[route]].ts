@@ -900,12 +900,102 @@ app.put('/admin/users/:id', async (c) => {
   }
 });
 
+// Helper function to safely delete user with all foreign key constraints cleared
+async function deleteUserCascade(db: any, userId: number | string) {
+  const uid = Number(userId);
+  // 1. Unlink department head
+  await db.prepare('UPDATE departments SET head_id = NULL WHERE head_id = ?').bind(uid).run();
+  // 2. Delete notifications for this user
+  await db.prepare('DELETE FROM notifications WHERE user_id = ?').bind(uid).run();
+  // 3. Delete reviews made by this user
+  await db.prepare('DELETE FROM reviews WHERE reviewer_id = ?').bind(uid).run();
+  // 4. Delete submission history entries made by this user
+  await db.prepare('DELETE FROM submission_history WHERE user_id = ?').bind(uid).run();
+  // 5. Delete reviews & submission_history for submissions owned by this user
+  await db.prepare('DELETE FROM reviews WHERE submission_id IN (SELECT id FROM submissions WHERE user_id = ?)').bind(uid).run();
+  await db.prepare('DELETE FROM submission_history WHERE submission_id IN (SELECT id FROM submissions WHERE user_id = ?)').bind(uid).run();
+  // 6. Delete submissions owned by this user
+  await db.prepare('DELETE FROM submissions WHERE user_id = ?').bind(uid).run();
+  // 7. Delete audit logs if any exist
+  try {
+    await db.prepare('DELETE FROM audit_logs WHERE user_id = ?').bind(uid).run();
+  } catch (_) {}
+  // 8. Finally delete the user
+  await db.prepare('DELETE FROM users WHERE id = ?').bind(uid).run();
+}
+
 app.delete('/admin/users/:id', async (c) => {
   try {
     const id = c.req.param('id');
     const db = c.env.DB;
-    await db.prepare('DELETE FROM users WHERE id = ?').bind(id).run();
+    await deleteUserCascade(db, id);
     return c.json({ success: true });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+// Bulk Delete Users
+app.post('/admin/users/bulk-delete', async (c) => {
+  try {
+    const db = c.env.DB;
+    const { user_ids } = await c.req.json();
+    if (!Array.isArray(user_ids) || user_ids.length === 0) {
+      return c.json({ error: 'ไม่พบรายการผู้ใช้ที่ต้องการลบ' }, 400);
+    }
+
+    for (const uid of user_ids) {
+      await deleteUserCascade(db, uid);
+    }
+
+    return c.json({ success: true, deletedCount: user_ids.length });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+// Bulk Update Users (แก้ไขกลุ่มสาระ, บทบาท, สถานะ, รีเซ็ตรหัสผ่านพร้อมกัน)
+app.post('/admin/users/bulk-update', async (c) => {
+  try {
+    const db = c.env.DB;
+    const body = await c.req.json();
+    const { user_ids, department_id, role, status, password } = body;
+
+    if (!Array.isArray(user_ids) || user_ids.length === 0) {
+      return c.json({ error: 'ไม่พบรายการผู้ใช้ที่ต้องการแก้ไข' }, 400);
+    }
+
+    const updates: string[] = [];
+    const params: any[] = [];
+
+    if (department_id !== undefined) {
+      updates.push('department_id = ?');
+      params.push(department_id ? Number(department_id) : null);
+    }
+    if (role !== undefined && role) {
+      updates.push('role = ?');
+      params.push(role);
+    }
+    if (status !== undefined && status) {
+      updates.push('status = ?');
+      params.push(status);
+    }
+    if (password && password.trim()) {
+      updates.push('password_hash = ?');
+      params.push(password.trim());
+    }
+
+    if (updates.length === 0) {
+      return c.json({ error: 'ไม่มีข้อมูลที่ต้องอัปเดต' }, 400);
+    }
+
+    const placeholders = user_ids.map(() => '?').join(',');
+    const query = `UPDATE users SET ${updates.join(', ')} WHERE id IN (${placeholders})`;
+    const allParams = [...params, ...user_ids];
+
+    await db.prepare(query).bind(...allParams).run();
+
+    return c.json({ success: true, updatedCount: user_ids.length });
   } catch (err: any) {
     return c.json({ error: err.message }, 500);
   }

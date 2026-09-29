@@ -9,7 +9,8 @@ import type {
   DepartmentProgress,
   MatrixRow,
   UnsubmittedResponse,
-  Notification
+  Notification,
+  UserRole
 } from '../types';
 
 const API_BASE = '/api';
@@ -81,6 +82,38 @@ export const api = {
     if (!res.ok) {
       const err: any = await res.json().catch(() => ({ error: 'ไม่สามารถลบผู้ใช้งานได้' }));
       throw new Error(err?.error || 'ไม่สามารถลบผู้ใช้งานได้');
+    }
+    return res.json();
+  },
+
+  async bulkDeleteUsers(userIds: number[]): Promise<{ success: boolean; deletedCount: number }> {
+    const res = await fetch(`${API_BASE}/admin/users/bulk-delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_ids: userIds })
+    });
+    if (!res.ok) {
+      const err: any = await res.json().catch(() => ({ error: 'ไม่สามารถลบผู้ใช้งานหลายคนได้' }));
+      throw new Error(err?.error || 'ไม่สามารถลบผู้ใช้งานหลายคนได้');
+    }
+    return res.json();
+  },
+
+  async bulkUpdateUsers(data: {
+    user_ids: number[];
+    department_id?: number | null;
+    role?: UserRole;
+    status?: 'active' | 'inactive';
+    password?: string;
+  }): Promise<{ success: boolean; updatedCount: number }> {
+    const res = await fetch(`${API_BASE}/admin/users/bulk-update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err: any = await res.json().catch(() => ({ error: 'ไม่สามารถแก้ไขข้อมูลหลายคนได้' }));
+      throw new Error(err?.error || 'ไม่สามารถแก้ไขข้อมูลหลายคนได้');
     }
     return res.json();
   },
