@@ -53,15 +53,16 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenT
         ];
       case 'department_head':
         return [
-          { id: 'head_dashboard', label: 'ติดตามกลุ่มสาระ' },
-          { id: 'head_reviews', label: 'ตรวจเอกสาร' },
+          { id: 'head_dashboard', label: '🔬 ตรวจเอกสารกลุ่มสาระ' },
+          { id: 'teacher_dashboard', label: '📝 ส่งงานของฉัน (แผน/วิจัย)' },
+          { id: 'teacher_history', label: '📜 ประวัติงานของฉัน' },
         ];
       case 'academic':
         return [
           { id: 'academic_dashboard', label: 'ภาพรวมวิชาการ' },
-          { id: 'academic_campaigns', label: 'จัดการรอบการส่ง' },
           { id: 'academic_matrix', label: 'ตารางติดตาม (Matrix)' },
           { id: 'academic_unsubmitted', label: 'ผู้ยังไม่ส่ง (LINE)' },
+          { id: 'teacher_dashboard', label: '📝 ส่งงานของฉัน (ภาระสอน)' },
         ];
       case 'executive':
         return [

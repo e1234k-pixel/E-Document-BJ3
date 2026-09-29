@@ -68,7 +68,7 @@ const AppContent: React.FC = () => {
       // Department Head
       case 'head_dashboard':
       case 'head_reviews':
-        return <DeptHeadDashboard />;
+        return <DeptHeadDashboard onNavigateToTeacher={() => setActiveTab('teacher_dashboard')} />;
 
       // Academic
       case 'academic_dashboard':

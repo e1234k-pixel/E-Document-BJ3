@@ -630,8 +630,8 @@ export const AdminDashboard: React.FC = () => {
                     className="w-full p-2.5 rounded-xl border border-slate-300 bg-white"
                   >
                     <option value="teacher">ครูผู้สอน</option>
-                    <option value="department_head">หัวหน้ากลุ่มสาระฯ</option>
-                    <option value="academic">ฝ่ายวิชาการ</option>
+                    <option value="department_head">หัวหน้ากลุ่มสาระฯ (ส่งงาน + ตรวจกลุ่มสาระ)</option>
+                    <option value="academic">ฝ่ายวิชาการ (ตรวจทุกกลุ่ม + บริหาร)</option>
                     <option value="executive">ผู้บริหาร</option>
                     <option value="admin">ผู้ดูแลระบบ</option>
                   </select>
@@ -648,6 +648,12 @@ export const AdminDashboard: React.FC = () => {
                   </select>
                 </div>
               </div>
+
+              {userRole === 'department_head' && (
+                <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-800 text-[11px] leading-relaxed">
+                  💡 <strong>ตำแหน่งควบ (2 ตำแหน่ง):</strong> บัญชีหัวหน้ากลุ่มสาระฯ สามารถส่งแผนการสอน/วิจัยของตนเอง และตรวจเอกสารของครูในกลุ่มสาระได้ในบัญชีเดียว โดยเอกสารของหัวหน้ากลุ่มสาระจะส่งต่อไปให้ฝ่ายวิชาการเป็นผู้ตรวจรับรอง
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-2">
                 <div>

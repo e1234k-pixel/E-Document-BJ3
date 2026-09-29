@@ -540,9 +540,8 @@ app.get('/analytics/kpis', async (c) => {
 
     const campaignId = c.req.query('campaign_id') || '1';
     const departmentId = c.req.query('department_id');
-
-    // Total teachers count
-    let teacherQuery = `SELECT COUNT(*) as count FROM users WHERE role = 'teacher' AND status = 'active'`;
+    // Total teachers count (including department heads who have teaching duty)
+    let teacherQuery = `SELECT COUNT(*) as count FROM users WHERE role IN ('teacher', 'department_head') AND status = 'active'`;
     if (departmentId) {
       teacherQuery += ` AND department_id = ${Number(departmentId)}`;
     }
@@ -614,7 +613,7 @@ app.get('/analytics/department-progress', async (c) => {
 
     for (const d of depts || []) {
       const teacherCount = (await db
-        .prepare(`SELECT COUNT(*) as count FROM users WHERE role = 'teacher' AND department_id = ? AND status = 'active'`)
+        .prepare(`SELECT COUNT(*) as count FROM users WHERE role IN ('teacher', 'department_head') AND department_id = ? AND status = 'active'`)
         .bind(d.id)
         .first<{ count: number }>())?.count || 0;
 
@@ -673,7 +672,7 @@ app.get('/analytics/matrix', async (c) => {
       SELECT u.id, u.title, u.name, u.role, u.department_id, d.name as department_name, d.code as department_code
       FROM users u
       LEFT JOIN departments d ON u.department_id = d.id
-      WHERE u.role = 'teacher' AND u.status = 'active'
+      WHERE u.role IN ('teacher', 'department_head') AND u.status = 'active'
     `;
     if (departmentId) {
       teacherQuery += ` AND u.department_id = ${Number(departmentId)}`;
@@ -733,7 +732,7 @@ app.get('/analytics/unsubmitted', async (c) => {
       SELECT u.id, u.title, u.name, u.phone, u.email, d.name as department_name, d.code as department_code
       FROM users u
       LEFT JOIN departments d ON u.department_id = d.id
-      WHERE u.role = 'teacher' AND u.status = 'active'
+      WHERE u.role IN ('teacher', 'department_head') AND u.status = 'active'
         AND u.id NOT IN (
           SELECT user_id FROM submissions WHERE campaign_id = ?
         )

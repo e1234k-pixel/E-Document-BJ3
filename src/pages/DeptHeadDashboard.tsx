@@ -15,10 +15,15 @@ import {
   MessageSquare,
   History,
   FileCheck2,
+  FileText,
   Clock
 } from 'lucide-react';
 
-export const DeptHeadDashboard: React.FC = () => {
+interface DeptHeadDashboardProps {
+  onNavigateToTeacher?: () => void;
+}
+
+export const DeptHeadDashboard: React.FC<DeptHeadDashboardProps> = ({ onNavigateToTeacher }) => {
   const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<number>(1);
@@ -122,22 +127,36 @@ export const DeptHeadDashboard: React.FC = () => {
           </p>
         </div>
 
-        {/* Campaign Selector */}
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-semibold text-slate-600 whitespace-nowrap">
-            เลือกรอบการส่ง:
-          </label>
-          <select
-            value={selectedCampaignId}
-            onChange={(e) => setSelectedCampaignId(Number(e.target.value))}
-            className="text-xs font-medium px-3.5 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
-          >
-            {campaigns.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.title}
-              </option>
-            ))}
-          </select>
+        {/* Right Controls: Submit Personal & Campaign Selector */}
+        <div className="flex flex-wrap items-center gap-3">
+          {onNavigateToTeacher && (
+            <button
+              onClick={onNavigateToTeacher}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs shadow-sm transition active:scale-95"
+              title="ส่งแผนการสอนหรือรายงานวิจัยในภาระการสอนของคุณ"
+            >
+              <FileText className="w-4 h-4" />
+              <span>📝 ส่งงานของฉัน (แผน/วิจัย)</span>
+            </button>
+          )}
+
+          {/* Campaign Selector */}
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-semibold text-slate-600 whitespace-nowrap">
+              เลือกรอบการส่ง:
+            </label>
+            <select
+              value={selectedCampaignId}
+              onChange={(e) => setSelectedCampaignId(Number(e.target.value))}
+              className="text-xs font-medium px-3.5 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              {campaigns.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -265,13 +284,28 @@ export const DeptHeadDashboard: React.FC = () => {
                       </a>
                     </td>
                     <td className="px-5 py-3.5 text-right space-x-1.5 whitespace-nowrap">
-                      {/* Review Button */}
-                      <button
-                        onClick={() => handleOpenReview(sub)}
-                        className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-blue-600 text-white font-semibold text-xs shadow-sm transition active:scale-95"
-                      >
-                        ตรวจเอกสาร
-                      </button>
+                      {/* Review Action or Self-Submission Indicator */}
+                      {sub.user_id === user?.id ? (
+                        sub.status === 'approved' ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                            ✅ วิชาการรับรองแล้ว
+                          </span>
+                        ) : (
+                          <span
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-lg"
+                            title="เอกสารของหัวหน้ากลุ่มสาระ จะได้รับการตรวจรับรองโดยฝ่ายวิชาการ"
+                          >
+                            👤 งานของท่าน (รอวิชาการตรวจ)
+                          </span>
+                        )
+                      ) : (
+                        <button
+                          onClick={() => handleOpenReview(sub)}
+                          className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-blue-600 text-white font-semibold text-xs shadow-sm transition active:scale-95"
+                        >
+                          ตรวจเอกสาร
+                        </button>
+                      )}
 
                       {/* History */}
                       <button
