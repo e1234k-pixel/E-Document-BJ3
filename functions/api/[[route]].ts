@@ -903,24 +903,18 @@ app.put('/admin/users/:id', async (c) => {
 // Helper function to safely delete user with all foreign key constraints cleared
 async function deleteUserCascade(db: any, userId: number | string) {
   const uid = Number(userId);
-  // 1. Unlink department head
-  await db.prepare('UPDATE departments SET head_id = NULL WHERE head_id = ?').bind(uid).run();
-  // 2. Delete notifications for this user
+  // 1. Delete notifications for this user
   await db.prepare('DELETE FROM notifications WHERE user_id = ?').bind(uid).run();
-  // 3. Delete reviews made by this user
+  // 2. Delete reviews made by this user
   await db.prepare('DELETE FROM reviews WHERE reviewer_id = ?').bind(uid).run();
-  // 4. Delete submission history entries made by this user
+  // 3. Delete submission history entries made by this user
   await db.prepare('DELETE FROM submission_history WHERE user_id = ?').bind(uid).run();
-  // 5. Delete reviews & submission_history for submissions owned by this user
+  // 4. Delete reviews & submission_history for submissions owned by this user
   await db.prepare('DELETE FROM reviews WHERE submission_id IN (SELECT id FROM submissions WHERE user_id = ?)').bind(uid).run();
   await db.prepare('DELETE FROM submission_history WHERE submission_id IN (SELECT id FROM submissions WHERE user_id = ?)').bind(uid).run();
-  // 6. Delete submissions owned by this user
+  // 5. Delete submissions owned by this user
   await db.prepare('DELETE FROM submissions WHERE user_id = ?').bind(uid).run();
-  // 7. Delete audit logs if any exist
-  try {
-    await db.prepare('DELETE FROM audit_logs WHERE user_id = ?').bind(uid).run();
-  } catch (_) {}
-  // 8. Finally delete the user
+  // 6. Finally delete the user
   await db.prepare('DELETE FROM users WHERE id = ?').bind(uid).run();
 }
 
