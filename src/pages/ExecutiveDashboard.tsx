@@ -238,7 +238,7 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({ onOpenTv
               จัดอันดับตามเปอร์เซ็นต์ความก้าวหน้าในการส่งเอกสาร
             </p>
           </div>
-          <span className="text-xs text-slate-400">8 กลุ่มสาระการเรียนรู้</span>
+          <span className="text-xs text-slate-400">{deptProgress.length} กลุ่มสาระ/กิจกรรม</span>
         </div>
 
         <div className="overflow-x-auto">
