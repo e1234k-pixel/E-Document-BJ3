@@ -89,18 +89,22 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenT
         <div className="flex items-center justify-between h-16">
           {/* Logo & School Title */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
-              <GraduationCap className="w-6 h-6" />
-            </div>
+            <img
+              src="/logo.png"
+              alt="ตราประจำโรงเรียนบรรหารแจ่มใสวิทยา 3"
+              className="w-10 h-10 object-contain drop-shadow-md rounded-xl bg-white p-0.5 border border-slate-700/60"
+            />
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-base tracking-tight text-white">BJ3 Academic</span>
+                <span className="font-bold text-sm sm:text-base tracking-tight text-white">
+                  โรงเรียนบรรหารแจ่มใสวิทยา ๓
+                </span>
                 <span className="text-[10px] uppercase font-semibold tracking-wider px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-400/30">
-                  2569
+                  BJ3
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 hidden sm:block">
-                ระบบส่งและติดตามเอกสารวิชาการออนไลน์ โรงเรียนบึงกาฬ
+                ระบบส่งและติดตามเอกสารวิชาการออนไลน์ • อ.ด่านช้าง จ.สุพรรณบุรี
               </p>
             </div>
           </div>

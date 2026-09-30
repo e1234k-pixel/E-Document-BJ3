@@ -80,20 +80,22 @@ export const TvModePage: React.FC<TvModePageProps> = ({ onClose }) => {
       {/* Top TV Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-            <GraduationCap className="w-8 h-8" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="ตราประจำโรงเรียนบรรหารแจ่มใสวิทยา 3"
+            className="w-14 h-14 object-contain rounded-2xl bg-white p-1 shadow-lg shadow-blue-500/20 border border-slate-700"
+          />
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-                BJ3 ACADEMIC LIVE DASHBOARD
+                โรงเรียนบรรหารแจ่มใสวิทยา ๓
               </h1>
               <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/30 animate-pulse">
                 ● LIVE
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              ศูนย์ติดตามความก้าวหน้าเอกสารวิชาการ โรงเรียนบึงกาฬ • ปีการศึกษา 2569
+              ศูนย์ติดตามความก้าวหน้าเอกสารวิชาการ อำเภอด่านช้าง จังหวัดสุพรรณบุรี • ปีการศึกษา 2569
             </p>
           </div>
         </div>
@@ -238,7 +240,7 @@ export const TvModePage: React.FC<TvModePageProps> = ({ onClose }) => {
 
       {/* Footer */}
       <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
-        <span>โรงเรียนบึงกาฬ • ฝ่ายบริหารวิชาการ • BJ3 Academic Submission System</span>
+        <span>โรงเรียนบรรหารแจ่มใสวิทยา 3 อำเภอด่านช้าง จังหวัดสุพรรณบุรี • ฝ่ายบริหารวิชาการ • BJ3 Academic</span>
         <span>กด ESC เพื่อออกจากโหมดเต็มหน้าจอ</span>
       </div>
     </div>

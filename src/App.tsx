@@ -116,7 +116,7 @@ const AppContent: React.FC = () => {
             BJ3 Academic Submission & Progress Tracking System
           </p>
           <p>
-            ระบบส่งและติดตามเอกสารวิชาการออนไลน์ • พัฒนาโดย งานวิชาการ โรงเรียนบึงกาฬ ปีการศึกษา 2569
+            ระบบส่งและติดตามเอกสารวิชาการออนไลน์ • โรงเรียนบรรหารแจ่มใสวิทยา 3 อำเภอด่านช้าง จังหวัดสุพรรณบุรี • ปีการศึกษา 2569
           </p>
           <p className="text-[11px] text-slate-400">
             Cloudflare Pages & D1 Database • Powered by Google Drive & QR Code Verification

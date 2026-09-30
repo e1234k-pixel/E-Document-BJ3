@@ -30,18 +30,22 @@ export const LoginPage: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8 text-slate-100">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center px-4">
         {/* Emblem */}
-        <div className="inline-flex p-4 rounded-3xl bg-blue-600/30 border border-blue-400/30 shadow-2xl backdrop-blur-md mb-4 text-white">
-          <GraduationCap className="w-12 h-12 text-blue-400" />
+        <div className="inline-flex p-3 rounded-3xl bg-white shadow-2xl backdrop-blur-md mb-4 border border-blue-400/30">
+          <img
+            src="/logo.png"
+            alt="ตราประจำโรงเรียนบรรหารแจ่มใสวิทยา 3"
+            className="w-24 h-24 object-contain"
+          />
         </div>
 
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-          BJ3 Academic Submission
+          โรงเรียนบรรหารแจ่มใสวิทยา ๓
         </h1>
         <p className="mt-1 text-sm text-blue-200">
-          ระบบส่งและติดตามเอกสารวิชาการออนไลน์
+          ระบบส่งและติดตามเอกสารวิชาการออนไลน์ (BJ3 Academic)
         </p>
-        <div className="inline-block mt-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold border border-blue-400/30">
-          โรงเรียนบึงกาฬ • ปีการศึกษา 2569
+        <div className="inline-block mt-2 px-3.5 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold border border-blue-400/30">
+          อำเภอด่านช้าง จังหวัดสุพรรณบุรี • ปีการศึกษา 2569
         </div>
       </div>
 
@@ -110,7 +114,7 @@ export const LoginPage: React.FC = () => {
                 <span>คำแนะนำการเข้าใช้งานระบบ</span>
               </p>
               <p className="text-[11px] text-slate-500 leading-relaxed">
-                กรุณาเข้าสู่ระบบด้วย Username และรหัสผ่านที่ได้รับจากงานวิชาการ หากพบปัญหาการเข้าสู่ระบบ หรือต้องการขอสิทธิ์ใช้งาน กรุณาติดต่อผู้ดูแลระบบโรงเรียนบึงกาฬ
+                กรุณาเข้าสู่ระบบด้วย Username และรหัสผ่านที่ได้รับจากงานวิชาการ หากพบปัญหาการเข้าสู่ระบบ หรือต้องการขอสิทธิ์ใช้งาน กรุณาติดต่อผู้ดูแลระบบ โรงเรียนบรรหารแจ่มใสวิทยา 3
               </p>
             </div>
           </div>
@@ -118,7 +122,7 @@ export const LoginPage: React.FC = () => {
 
         {/* Footer info */}
         <p className="text-center text-xs text-slate-400 mt-6">
-          งานวิชาการ โรงเรียนบึงกาฬ • โครงการติดตามเอกสาร ว PA และงานวิจัย
+          งานวิชาการ โรงเรียนบรรหารแจ่มใสวิทยา 3 อำเภอด่านช้าง จังหวัดสุพรรณบุรี
         </p>
       </div>
     </div>

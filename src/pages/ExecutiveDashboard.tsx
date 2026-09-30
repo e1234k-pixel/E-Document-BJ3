@@ -71,7 +71,7 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({ onOpenTv
             รายงานความก้าวหน้าการดำเนินงานทางวิชาการ
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 mt-1">
-            โรงเรียนบึงกาฬ • ติดตามการส่งแผนการสอน ว PA และงานวิจัยในชั้นเรียนแบบ Real-time
+            โรงเรียนบรรหารแจ่มใสวิทยา 3 อำเภอด่านช้าง จังหวัดสุพรรณบุรี • ติดตามการส่งแผนการสอน ว PA และงานวิจัยในชั้นเรียนแบบ Real-time
           </p>
         </div>
 

@@ -49,7 +49,7 @@ export const LineCopyModal: React.FC<LineCopyModalProps> = ({
           .join('\n')
       : 'ยินดีด้วยครับ คุณครูส่งเอกสารครบทุกคนแล้ว! 🎉';
 
-  const fullLineMessage = `📢 [แจ้งเตือนงานวิชาการ โรงเรียนบึงกาฬ]
+  const fullLineMessage = `📢 [แจ้งเตือนงานวิชาการ โรงเรียนบรรหารแจ่มใสวิทยา 3]
 เรื่อง: ขอความอนุเคราะห์ส่ง ${campaign.title}
 ${remainingText}
 
@@ -60,7 +60,7 @@ ${teacherListText}
 👉 https://bj3-academic.pages.dev
 
 ขอขอบพระคุณคุณครูทุกท่านครับ 🙏
-งานวิชาการ โรงเรียนบึงกาฬ`;
+งานวิชาการ โรงเรียนบรรหารแจ่มใสวิทยา 3 อ.ด่านช้าง จ.สุพรรณบุรี`;
 
   const handleCopy = async () => {
     try {

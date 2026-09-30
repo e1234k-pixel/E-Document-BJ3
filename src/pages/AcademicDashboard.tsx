@@ -198,7 +198,7 @@ export const AcademicDashboard: React.FC<AcademicDashboardProps> = ({ initialSub
         <div>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200 mb-2">
             <FileText className="w-3.5 h-3.5" />
-            <span>ฝ่ายวิชาการ โรงเรียนบึงกาฬ (BJ3)</span>
+            <span>ฝ่ายวิชาการ โรงเรียนบรรหารแจ่มใสวิทยา 3 อำเภอด่านช้าง จังหวัดสุพรรณบุรี</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
             ศูนย์กลางการติดตามและบริหารงานวิชาการ
