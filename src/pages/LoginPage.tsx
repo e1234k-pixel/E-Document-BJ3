@@ -11,8 +11,6 @@ import {
   Eye,
   EyeOff,
   Sparkles,
-  ChevronDown,
-  ChevronUp,
   CheckCircle2,
   X,
   Users,
@@ -43,7 +41,6 @@ export const LoginPage: React.FC = () => {
   const [isQuickPickerOpen, setIsQuickPickerOpen] = useState<boolean>(false);
   const [teacherSearch, setTeacherSearch] = useState<string>('');
   const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>('all');
-  const [showAdminGuide, setShowAdminGuide] = useState<boolean>(false);
 
   useEffect(() => {
     api.getPublicTeachers().then(setTeachers).catch(console.error);
@@ -222,43 +219,7 @@ export const LoginPage: React.FC = () => {
             </button>
           </form>
 
-          {/* Quick Guide / Accounts Accordion */}
-          <div className="pt-3 border-t border-slate-100 space-y-2">
-            <button
-              type="button"
-              onClick={() => setShowAdminGuide(!showAdminGuide)}
-              className="w-full flex items-center justify-between text-[11px] font-bold text-slate-600 hover:text-slate-900 py-1"
-            >
-              <span className="flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                <span>บัญชีผู้บริหาร / แอดมิน / วิชาการ</span>
-              </span>
-              {showAdminGuide ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            </button>
 
-            {showAdminGuide && (
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-600 space-y-2 animate-fadeIn">
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="p-2 bg-white rounded-lg border border-slate-100">
-                    <p className="font-bold text-slate-800">แอดมิน (Admin)</p>
-                    <p className="text-slate-500 font-mono text-[10px]">User: admin | Pass: admin123</p>
-                  </div>
-                  <div className="p-2 bg-white rounded-lg border border-slate-100">
-                    <p className="font-bold text-slate-800">ผู้อำนวยการ (ผอ.)</p>
-                    <p className="text-slate-500 font-mono text-[10px]">User: director | Pass: exec123</p>
-                  </div>
-                  <div className="p-2 bg-white rounded-lg border border-slate-100">
-                    <p className="font-bold text-slate-800">ฝ่ายวิชาการ</p>
-                    <p className="text-slate-500 font-mono text-[10px]">User: academic | Pass: acad123</p>
-                  </div>
-                  <div className="p-2 bg-white rounded-lg border border-slate-100">
-                    <p className="font-bold text-slate-800">รองฯ วิชาการ</p>
-                    <p className="text-slate-500 font-mono text-[10px]">User: deputy_acad | Pass: exec123</p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Footer info */}
