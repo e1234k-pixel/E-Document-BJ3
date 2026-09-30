@@ -22,7 +22,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenTvMode }) => {
-  const { user, logout, switchRole } = useAuth();
+  const { user, logout } = useAuth();
   const [showRoleDropdown, setShowRoleDropdown] = useState<boolean>(false);
   const [showNotifDropdown, setShowNotifDropdown] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
@@ -82,17 +82,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenT
   };
 
   const navItems = navItemsByRole();
-
-  const handleRoleSwitch = (role: UserRole) => {
-    switchRole(role);
-    setShowRoleDropdown(false);
-    // Switch default tab
-    if (role === 'teacher') setActiveTab('teacher_dashboard');
-    else if (role === 'department_head') setActiveTab('head_dashboard');
-    else if (role === 'academic') setActiveTab('academic_dashboard');
-    else if (role === 'executive') setActiveTab('exec_dashboard');
-    else if (role === 'admin') setActiveTab('admin_dashboard');
-  };
 
   return (
     <header className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 text-white shadow-md">
@@ -197,20 +186,22 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenT
               )}
             </div>
 
-            {/* Fast Demo Role Switcher Dropdown */}
+            {/* Real User Profile Dropdown */}
             <div className="relative">
               <button
                 onClick={() => setShowRoleDropdown(!showRoleDropdown)}
-                className="flex items-center gap-2 p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs transition"
+                className="flex items-center gap-2.5 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs transition"
               >
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    user ? roleLabelMap[user.role].bg : 'bg-slate-400'
+                <div
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold ${
+                    user ? roleLabelMap[user.role].bg : 'bg-slate-600'
                   }`}
-                />
+                >
+                  {user?.name ? user.name.charAt(0) : 'U'}
+                </div>
                 <div className="text-left hidden sm:block">
-                  <p className="text-[11px] font-semibold text-white leading-tight">
-                    {user?.name || 'ผู้ใช้งาน'}
+                  <p className="text-[11px] font-bold text-white leading-tight">
+                    {user?.title}{user?.name || 'ผู้ใช้งาน'}
                   </p>
                   <p className="text-[10px] text-slate-400 leading-tight">
                     {user ? roleLabelMap[user.role].label : ''}
@@ -219,76 +210,64 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenT
                 <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
               </button>
 
-              {/* Role Dropdown Menu */}
+              {/* User Profile Menu */}
               {showRoleDropdown && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-slate-200 text-slate-800 overflow-hidden z-50 animate-fadeIn">
-                  <div className="px-3.5 py-2.5 bg-slate-50 border-b border-slate-200">
-                    <p className="text-[11px] font-bold text-slate-700">สลับบทบาททดสอบ (Demo Switcher)</p>
-                    <p className="text-[10px] text-slate-500">เปลี่ยนมุมมองเพื่อทดสอบระบบทันที</p>
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-200 text-slate-800 overflow-hidden z-50 animate-fadeIn">
+                  <div className="p-4 bg-slate-50 border-b border-slate-200">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold shadow ${
+                          user ? roleLabelMap[user.role].bg : 'bg-slate-600'
+                        }`}
+                      >
+                        {user?.name ? user.name.charAt(0) : 'U'}
+                      </div>
+                      <div className="overflow-hidden">
+                        <p className="text-xs font-bold text-slate-900 truncate">
+                          {user?.title}{user?.name}
+                        </p>
+                        <p className="text-[11px] text-slate-500 font-mono">
+                          @{user?.username}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 pt-2.5 border-t border-slate-200/60 space-y-1.5 text-[11px]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500">บทบาท:</span>
+                        <span className="font-semibold text-slate-800">
+                          {user ? roleLabelMap[user.role].label : '-'}
+                        </span>
+                      </div>
+
+                      {user?.department_name && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500">กลุ่มสาระ:</span>
+                          <span className="font-semibold text-slate-800 truncate max-w-[130px]">
+                            {user.department_name.replace('กลุ่มสาระการเรียนรู้', '')}
+                          </span>
+                        </div>
+                      )}
+
+                      {user?.phone && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500">เบอร์โทร:</span>
+                          <span className="font-mono text-slate-700">{user.phone}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="p-1 space-y-0.5 text-xs">
-                    <button
-                      onClick={() => handleRoleSwitch('teacher')}
-                      className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between hover:bg-slate-100 transition ${
-                        user?.role === 'teacher' ? 'font-semibold text-blue-600 bg-blue-50' : 'text-slate-700'
-                      }`}
-                    >
-                      <span>👨‍🏫 ครูผู้สอน (สมชาย)</span>
-                      {user?.role === 'teacher' && <CheckCircle className="w-3.5 h-3.5 text-blue-600" />}
-                    </button>
-
-                    <button
-                      onClick={() => handleRoleSwitch('department_head')}
-                      className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between hover:bg-slate-100 transition ${
-                        user?.role === 'department_head' ? 'font-semibold text-purple-600 bg-purple-50' : 'text-slate-700'
-                      }`}
-                    >
-                      <span>🔬 หัวหน้ากลุ่มสาระฯ (เดชา)</span>
-                      {user?.role === 'department_head' && <CheckCircle className="w-3.5 h-3.5 text-purple-600" />}
-                    </button>
-
-                    <button
-                      onClick={() => handleRoleSwitch('academic')}
-                      className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between hover:bg-slate-100 transition ${
-                        user?.role === 'academic' ? 'font-semibold text-blue-600 bg-blue-50' : 'text-slate-700'
-                      }`}
-                    >
-                      <span>📚 ฝ่ายวิชาการ (นภาพร)</span>
-                      {user?.role === 'academic' && <CheckCircle className="w-3.5 h-3.5 text-blue-600" />}
-                    </button>
-
-                    <button
-                      onClick={() => handleRoleSwitch('executive')}
-                      className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between hover:bg-slate-100 transition ${
-                        user?.role === 'executive' ? 'font-semibold text-amber-600 bg-amber-50' : 'text-slate-700'
-                      }`}
-                    >
-                      <span>🎓 ผู้บริหาร / ผอ. (วิชาญ)</span>
-                      {user?.role === 'executive' && <CheckCircle className="w-3.5 h-3.5 text-amber-600" />}
-                    </button>
-
-                    <button
-                      onClick={() => handleRoleSwitch('admin')}
-                      className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between hover:bg-slate-100 transition ${
-                        user?.role === 'admin' ? 'font-semibold text-rose-600 bg-rose-50' : 'text-slate-700'
-                      }`}
-                    >
-                      <span>⚙️ ผู้ดูแลระบบ (สมศักดิ์)</span>
-                      {user?.role === 'admin' && <CheckCircle className="w-3.5 h-3.5 text-rose-600" />}
-                    </button>
-                  </div>
-
-                  <div className="p-1 border-t border-slate-100">
+                  <div className="p-2">
                     <button
                       onClick={() => {
                         logout();
                         setShowRoleDropdown(false);
                       }}
-                      className="w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 text-rose-600 hover:bg-rose-50 text-xs font-medium transition"
+                      className="w-full text-left px-3 py-2 rounded-xl flex items-center gap-2 text-rose-600 hover:bg-rose-50 text-xs font-bold transition"
                     >
-                      <LogOut className="w-3.5 h-3.5" />
-                      <span>ออกจากระบบ</span>
+                      <LogOut className="w-4 h-4" />
+                      <span>ออกจากระบบ (Log Out)</span>
                     </button>
                   </div>
                 </div>

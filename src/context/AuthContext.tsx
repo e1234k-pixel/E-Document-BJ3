@@ -44,11 +44,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch {
           localStorage.removeItem('bj3_user');
         }
-      } else if (fetchedUsers.length > 0) {
-        // Default to a teacher for smooth first-time experience
-        const defaultUser = fetchedUsers.find((u) => u.username === 'teacher_somchai') || fetchedUsers[0];
-        setUser(defaultUser);
-        localStorage.setItem('bj3_user', JSON.stringify(defaultUser));
       }
       setIsLoading(false);
     };

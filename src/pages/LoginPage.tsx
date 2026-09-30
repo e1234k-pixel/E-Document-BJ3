@@ -1,30 +1,29 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { GraduationCap, Lock, User, ArrowRight, ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
-import type { UserRole } from '../types';
+import { GraduationCap, Lock, User, ArrowRight, ShieldCheck } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
-  const { login, switchRole, usersList } = useAuth();
-  const [username, setUsername] = useState<string>('teacher_somchai');
-  const [password, setPassword] = useState<string>('teacher123');
+  const { login } = useAuth();
+  const [username, setUsername] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!username.trim() || !password.trim()) {
+      setError('กรุณากรอก Username และรหัสผ่าน');
+      return;
+    }
     setError(null);
     setLoading(true);
     try {
-      await login(username, password);
+      await login(username.trim(), password.trim());
     } catch (err: any) {
-      setError(err.message || 'เข้าสู่ระบบไม่สำเร็จ');
+      setError(err.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleFastDemoLogin = (role: UserRole) => {
-    switchRole(role);
   };
 
   return (
@@ -68,7 +67,7 @@ export const LoginPage: React.FC = () => {
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="เช่น teacher_somchai หรือ admin"
+                  placeholder="กรอกชื่อผู้ใช้งานของคุณ"
                   className="block w-full pl-10 pr-3 py-2.5 sm:text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                 />
               </div>
@@ -87,7 +86,7 @@ export const LoginPage: React.FC = () => {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="รหัสผ่าน"
+                  placeholder="กรอกรหัสผ่าน"
                   className="block w-full pl-10 pr-3 py-2.5 sm:text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                 />
               </div>
@@ -103,83 +102,16 @@ export const LoginPage: React.FC = () => {
             </button>
           </form>
 
-          {/* Demo 1-Click Fast Switcher */}
-          <div className="mt-6 pt-6 border-t border-slate-200">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 mb-2.5">
-              <Sparkles className="w-4 h-4 text-amber-500" />
-              <span>เข้าใช้งานทดสอบทันที (1-Click Demo)</span>
-            </div>
-
-            <div className="grid grid-cols-1 gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => handleFastDemoLogin('teacher')}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/70 text-emerald-950 font-medium transition text-left"
-              >
-                <div>
-                  <p className="font-semibold text-emerald-900">👨‍🏫 ครูสมชาย ขยันสอน</p>
-                  <p className="text-[10px] text-emerald-700">ส่งแผน 2/69, วิจัย 1/69, ตรวจเช็ค Drive</p>
-                </div>
-                <span className="text-[11px] px-2 py-0.5 rounded bg-emerald-200 text-emerald-800 font-bold shrink-0">
-                  ครู
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleFastDemoLogin('department_head')}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl border border-purple-200 bg-purple-50/50 hover:bg-purple-100/70 text-purple-950 font-medium transition text-left"
-              >
-                <div>
-                  <p className="font-semibold text-purple-900">🔬 นายเดชา วิทยากร</p>
-                  <p className="text-[10px] text-purple-700">หัวหน้ากลุ่มสาระฯ วิทยาศาสตร์ (ตรวจเอกสาร/อนุมัติ)</p>
-                </div>
-                <span className="text-[11px] px-2 py-0.5 rounded bg-purple-200 text-purple-800 font-bold shrink-0">
-                  หัวหน้ากลุ่ม
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleFastDemoLogin('academic')}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-100/70 text-blue-950 font-medium transition text-left"
-              >
-                <div>
-                  <p className="font-semibold text-blue-900">📚 นางนภาพร วิชาการเลิศ</p>
-                  <p className="text-[10px] text-blue-700">ฝ่ายวิชาการ (เปิด Campaign, Matrix, Copy LINE, Export Excel)</p>
-                </div>
-                <span className="text-[11px] px-2 py-0.5 rounded bg-blue-200 text-blue-800 font-bold shrink-0">
-                  วิชาการ
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleFastDemoLogin('executive')}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl border border-amber-200 bg-amber-50/50 hover:bg-amber-100/70 text-amber-950 font-medium transition text-left"
-              >
-                <div>
-                  <p className="font-semibold text-amber-900">🎓 ดร.วิชาญ บริหารการศึกษา</p>
-                  <p className="text-[10px] text-amber-700">ผู้อำนวยการโรงเรียน (แดชบอร์ด KPI, 4 ชาร์ต, TV Mode)</p>
-                </div>
-                <span className="text-[11px] px-2 py-0.5 rounded bg-amber-200 text-amber-800 font-bold shrink-0">
-                  ผู้บริหาร
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleFastDemoLogin('admin')}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 font-medium transition text-left"
-              >
-                <div>
-                  <p className="font-semibold text-slate-900">⚙️ นายสมศักดิ์ พัฒนาระบบ</p>
-                  <p className="text-[10px] text-slate-500">ผู้ดูแลระบบ (จัดการสิทธิ์, บุคลากร, Campaign)</p>
-                </div>
-                <span className="text-[11px] px-2 py-0.5 rounded bg-slate-200 text-slate-800 font-bold shrink-0">
-                  Admin
-                </span>
-              </button>
+          {/* Information & Support Note */}
+          <div className="mt-6 pt-5 border-t border-slate-200">
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-1.5">
+              <p className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-blue-600" />
+                <span>คำแนะนำการเข้าใช้งานระบบ</span>
+              </p>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                กรุณาเข้าสู่ระบบด้วย Username และรหัสผ่านที่ได้รับจากงานวิชาการ หากพบปัญหาการเข้าสู่ระบบ หรือต้องการขอสิทธิ์ใช้งาน กรุณาติดต่อผู้ดูแลระบบโรงเรียนบึงกาฬ
+              </p>
             </div>
           </div>
         </div>
@@ -192,3 +124,5 @@ export const LoginPage: React.FC = () => {
     </div>
   );
 };
+
+export default LoginPage;
