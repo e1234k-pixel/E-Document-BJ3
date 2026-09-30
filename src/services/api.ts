@@ -30,6 +30,21 @@ export const api = {
     return res.json();
   },
 
+  async getPublicTeachers(): Promise<Array<{
+    id: number;
+    title: string;
+    name: string;
+    username: string;
+    role: string;
+    department_id: number;
+    department_name: string;
+    department_code: string;
+  }>> {
+    const res = await fetch(`${API_BASE}/public/teachers`);
+    if (!res.ok) return [];
+    return res.json();
+  },
+
   async getUsers(): Promise<User[]> {
     const res = await fetch(`${API_BASE}/auth/users`);
     if (!res.ok) return [];

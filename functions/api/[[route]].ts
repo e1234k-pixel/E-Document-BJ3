@@ -24,7 +24,7 @@ app.get('/health', async (c) => {
 });
 
 // ==========================================
-// 2. Authentication & Demo Role Switcher
+// 2. Authentication & Public Teacher Directory
 // ==========================================
 app.post('/auth/login', async (c) => {
   try {
@@ -35,23 +35,55 @@ app.post('/auth/login', async (c) => {
       return c.json({ error: 'Database not available' }, 500);
     }
 
-    const user = await db
+    const trimmedInput = (username || '').trim();
+    const cleanInput = trimmedInput.replace(/\s+/g, '');
+
+    // Try finding by username, Thai name, title + name, or clean stripped name
+    let user = await db
       .prepare(`
         SELECT u.*, d.name as department_name, d.code as department_code
         FROM users u
         LEFT JOIN departments d ON u.department_id = d.id
-        WHERE u.username = ?
+        WHERE LOWER(u.username) = LOWER(?)
+           OR u.name = ?
+           OR (u.title || u.name) = ?
+           OR REPLACE(u.name, ' ', '') = ?
+           OR REPLACE(u.title || u.name, ' ', '') = ?
+        LIMIT 1
       `)
-      .bind(username)
+      .bind(trimmedInput, trimmedInput, trimmedInput, cleanInput, cleanInput)
       .first<any>();
 
-    if (!user) {
-      return c.json({ error: 'ไม่พบบัญชีผู้ใช้งานนี้ในระบบ' }, 401);
+    // If not found, try finding by first name match: e.g. "บาหยัญ" matching "บาหยัญ นันทา"
+    if (!user && trimmedInput.length >= 2) {
+      user = await db
+        .prepare(`
+          SELECT u.*, d.name as department_name, d.code as department_code
+          FROM users u
+          LEFT JOIN departments d ON u.department_id = d.id
+          WHERE u.name LIKE ?
+          LIMIT 1
+        `)
+        .bind(`${trimmedInput}%`)
+        .first<any>();
     }
 
-    // In demo/MVP, accept password match (or default demo passwords)
-    if (user.password_hash !== password && password !== 'admin123' && password !== 'teacher123') {
-      return c.json({ error: 'รหัสผ่านไม่ถูกต้อง' }, 401);
+    if (!user) {
+      return c.json({ error: 'ไม่พบบัญชีผู้ใช้งานหรือชื่อนี้ในระบบ' }, 401);
+    }
+
+    // In school intranet: accept 1234, 123456, or password_hash
+    const isPasswordValid =
+      user.password_hash === password ||
+      password === '1234' ||
+      password === '123456' ||
+      password === 'password123' ||
+      (user.role === 'admin' && password === 'admin123') ||
+      (user.role === 'executive' && password === 'exec123') ||
+      (user.role === 'academic' && password === 'acad123');
+
+    if (!isPasswordValid) {
+      return c.json({ error: 'รหัสผ่านไม่ถูกต้อง (รหัสเริ่มต้นสำหรับครูผู้สอนคือ 1234)' }, 401);
     }
 
     if (user.status !== 'active') {
@@ -64,6 +96,28 @@ app.post('/auth/login', async (c) => {
       user: safeUser,
       token: `demo-token-${user.id}-${Date.now()}`
     });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+app.get('/public/teachers', async (c) => {
+  try {
+    const db = c.env.DB;
+    if (!db) return c.json([]);
+
+    const { results } = await db
+      .prepare(`
+        SELECT u.id, u.title, u.name, u.username, u.role, u.department_id,
+               d.name as department_name, d.code as department_code
+        FROM users u
+        LEFT JOIN departments d ON u.department_id = d.id
+        WHERE u.status = 'active' AND u.role IN ('teacher', 'department_head')
+        ORDER BY u.department_id, u.username
+      `)
+      .all<any>();
+
+    return c.json(results || []);
   } catch (err: any) {
     return c.json({ error: err.message }, 500);
   }
