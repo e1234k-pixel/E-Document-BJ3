@@ -23,7 +23,7 @@ export interface User {
   email?: string;
   phone?: string;
   role: UserRole;
-  department_id?: number;
+  department_id?: number | null;
   department_name?: string;
   department_code?: string;
   status: 'active' | 'inactive';
@@ -52,7 +52,7 @@ export interface Submission {
   user_name?: string;
   user_email?: string;
   user_phone?: string;
-  department_id?: number;
+  department_id?: number | null;
   department_name?: string;
   department_code?: string;
   subject_name: string;

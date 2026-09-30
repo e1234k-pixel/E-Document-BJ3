@@ -44,7 +44,7 @@ export const AdminDashboard: React.FC = () => {
   const [userName, setUserName] = useState<string>('');
   const [userUsername, setUserUsername] = useState<string>('');
   const [userPassword, setUserPassword] = useState<string>('123456');
-  const [userDeptId, setUserDeptId] = useState<number>(1);
+  const [userDeptId, setUserDeptId] = useState<number | null>(null);
   const [userRole, setUserRole] = useState<UserRole>('teacher');
   const [userEmail, setUserEmail] = useState<string>('');
   const [userPhone, setUserPhone] = useState<string>('');
@@ -54,7 +54,7 @@ export const AdminDashboard: React.FC = () => {
   // Bulk Import Modal State
   const [isBulkModalOpen, setIsBulkModalOpen] = useState<boolean>(false);
   const [bulkText, setBulkText] = useState<string>('');
-  const [bulkDefaultDept, setBulkDefaultDept] = useState<number>(1);
+  const [bulkDefaultDept, setBulkDefaultDept] = useState<number | null>(1);
   const [bulkDefaultRole, setBulkDefaultRole] = useState<UserRole>('teacher');
   const [parsedUsers, setParsedUsers] = useState<Array<Partial<User> & { password?: string }>>([]);
   const [isImporting, setIsImporting] = useState<boolean>(false);
@@ -64,7 +64,7 @@ export const AdminDashboard: React.FC = () => {
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState<boolean>(false);
   const [bulkEditDeptEnabled, setBulkEditDeptEnabled] = useState<boolean>(false);
-  const [bulkEditDeptId, setBulkEditDeptId] = useState<number>(1);
+  const [bulkEditDeptId, setBulkEditDeptId] = useState<number | null>(null);
   const [bulkEditRoleEnabled, setBulkEditRoleEnabled] = useState<boolean>(false);
   const [bulkEditRole, setBulkEditRole] = useState<UserRole>('teacher');
   const [bulkEditStatusEnabled, setBulkEditStatusEnabled] = useState<boolean>(false);
@@ -110,7 +110,7 @@ export const AdminDashboard: React.FC = () => {
     setUserName('');
     setUserUsername('');
     setUserPassword('123456');
-    setUserDeptId(departments[0]?.id || 1);
+    setUserDeptId(departments[0]?.id ?? 1);
     setUserRole('teacher');
     setUserEmail('');
     setUserPhone('');
@@ -125,7 +125,7 @@ export const AdminDashboard: React.FC = () => {
     setUserName(u.name);
     setUserUsername(u.username);
     setUserPassword(''); // blank means do not change password
-    setUserDeptId(u.department_id || 1);
+    setUserDeptId(u.department_id ?? null);
     setUserRole(u.role);
     setUserEmail(u.email || '');
     setUserPhone(u.phone || '');
@@ -241,7 +241,7 @@ export const AdminDashboard: React.FC = () => {
       return;
     }
     setBulkEditDeptEnabled(false);
-    setBulkEditDeptId(departments[0]?.id || 1);
+    setBulkEditDeptId(departments[0]?.id ?? null);
     setBulkEditRoleEnabled(false);
     setBulkEditRole('teacher');
     setBulkEditStatusEnabled(false);
@@ -264,7 +264,7 @@ export const AdminDashboard: React.FC = () => {
     try {
       await api.bulkUpdateUsers({
         user_ids: selectedUserIds,
-        department_id: bulkEditDeptEnabled ? bulkEditDeptId : undefined,
+        department_id: bulkEditDeptEnabled ? (bulkEditDeptId ?? null) : undefined,
         role: bulkEditRoleEnabled ? bulkEditRole : undefined,
         status: bulkEditStatusEnabled ? bulkEditStatus : undefined,
         password: bulkEditPasswordEnabled ? bulkEditPassword : undefined,
@@ -620,7 +620,11 @@ export const AdminDashboard: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-slate-600">
-                        {u.department_name ? u.department_name.replace('กลุ่มสาระการเรียนรู้', '') : '-'}
+                        {u.department_name ? (
+                          u.department_name.replace('กลุ่มสาระการเรียนรู้', '')
+                        ) : (
+                          <span className="text-slate-400 italic text-[11px]">— ฝ่ายบริหาร / ส่วนกลาง —</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-slate-500 font-mono text-[11px]">
                         {u.phone || '-'}
@@ -767,34 +771,27 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">กลุ่มสาระการเรียนรู้</label>
-                <select
-                  value={userDeptId}
-                  onChange={(e) => setUserDeptId(Number(e.target.value))}
-                  className="w-full p-2.5 rounded-xl border border-slate-300 bg-white"
-                >
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">บทบาท (Role)</label>
+                  <label className="block font-semibold text-slate-700 mb-1">บทบาท (Role) <span className="text-rose-500">*</span></label>
                   <select
                     value={userRole}
-                    onChange={(e) => setUserRole(e.target.value as UserRole)}
+                    onChange={(e) => {
+                      const newRole = e.target.value as UserRole;
+                      setUserRole(newRole);
+                      if (newRole === 'executive' || newRole === 'admin') {
+                        setUserDeptId(null);
+                      } else if (!userDeptId && departments.length > 0) {
+                        setUserDeptId(departments[0].id);
+                      }
+                    }}
                     className="w-full p-2.5 rounded-xl border border-slate-300 bg-white"
                   >
                     <option value="teacher">ครูผู้สอน</option>
                     <option value="department_head">หัวหน้ากลุ่มสาระฯ (ส่งงาน + ตรวจกลุ่มสาระ)</option>
                     <option value="academic">ฝ่ายวิชาการ (ตรวจทุกกลุ่ม + บริหาร)</option>
-                    <option value="executive">ผู้บริหาร</option>
-                    <option value="admin">ผู้ดูแลระบบ</option>
+                    <option value="executive">ผู้บริหาร (ผอ. / รอง ผอ.)</option>
+                    <option value="admin">ผู้ดูแลระบบ (Admin)</option>
                   </select>
                 </div>
                 <div>
@@ -810,9 +807,47 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-semibold text-slate-700">กลุ่มสาระการเรียนรู้</label>
+                  {(userRole === 'executive' || userRole === 'admin') && (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                      ไม่จำเป็นสำหรับผู้บริหาร
+                    </span>
+                  )}
+                </div>
+                <select
+                  value={userDeptId ?? ''}
+                  onChange={(e) => setUserDeptId(e.target.value ? Number(e.target.value) : null)}
+                  className={`w-full p-2.5 rounded-xl border bg-white ${
+                    userRole === 'executive' || userRole === 'admin'
+                      ? 'border-blue-300 bg-blue-50/20 text-slate-800'
+                      : 'border-slate-300 text-slate-900'
+                  }`}
+                >
+                  <option value="">— ไม่สังกัดกลุ่มสาระ (คณะผู้บริหาร / ส่วนกลาง) —</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+                {(userRole === 'executive' || userRole === 'admin') && (
+                  <p className="mt-1 text-[11px] text-blue-600">
+                    ℹ️ คณะผู้บริหาร (ผู้อำนวยการ และรองผู้อำนวยการ) ไม่จำเป็นต้องเลือกกลุ่มสาระ เพื่อไม่ให้รายชื่อไปปะปนในตารางสรุปการส่งงานของกลุ่มสาระ
+                  </p>
+                )}
+              </div>
+
               {userRole === 'department_head' && (
                 <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-800 text-[11px] leading-relaxed">
                   💡 <strong>ตำแหน่งควบ (2 ตำแหน่ง):</strong> บัญชีหัวหน้ากลุ่มสาระฯ สามารถส่งแผนการสอน/วิจัยของตนเอง และตรวจเอกสารของครูในกลุ่มสาระได้ในบัญชีเดียว โดยเอกสารของหัวหน้ากลุ่มสาระจะส่งต่อไปให้ฝ่ายวิชาการเป็นผู้ตรวจรับรอง
+                </div>
+              )}
+
+              {userRole === 'executive' && (
+                <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-[11px] leading-relaxed">
+                  🏛️ <strong>บทบาทผู้บริหาร:</strong> สามารถติดตามภาพรวม สถิติความก้าวหน้าการส่งงานของทั้งโรงเรียน และลงนามอนุมัติเอกสารในขั้นตอนสุดท้ายได้
                 </div>
               )}
 
@@ -942,10 +977,11 @@ export const AdminDashboard: React.FC = () => {
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">กลุ่มสาระเริ่มต้น (หากไม่ระบุในไฟล์)</label>
                   <select
-                    value={bulkDefaultDept}
-                    onChange={(e) => setBulkDefaultDept(Number(e.target.value))}
+                    value={bulkDefaultDept ?? ''}
+                    onChange={(e) => setBulkDefaultDept(e.target.value ? Number(e.target.value) : null)}
                     className="w-full p-2 rounded-xl border border-slate-300 bg-white"
                   >
+                    <option value="">— ไม่สังกัดกลุ่มสาระ (คณะผู้บริหาร / ส่วนกลาง) —</option>
                     {departments.map((d) => (
                       <option key={d.id} value={d.id}>{d.name}</option>
                     ))}
@@ -1058,10 +1094,11 @@ export const AdminDashboard: React.FC = () => {
                 </label>
                 <select
                   disabled={!bulkEditDeptEnabled}
-                  value={bulkEditDeptId}
-                  onChange={(e) => setBulkEditDeptId(Number(e.target.value))}
+                  value={bulkEditDeptId ?? ''}
+                  onChange={(e) => setBulkEditDeptId(e.target.value ? Number(e.target.value) : null)}
                   className="w-full p-2.5 rounded-xl border border-slate-300 bg-white disabled:bg-slate-100 disabled:text-slate-400 font-medium cursor-pointer"
                 >
+                  <option value="">— ไม่สังกัดกลุ่มสาระ (คณะผู้บริหาร / ส่วนกลาง) —</option>
                   {departments.map((d) => (
                     <option key={d.id} value={d.id}>
                       {d.name}
