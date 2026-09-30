@@ -17,6 +17,7 @@ import {
   FileX
 } from 'lucide-react';
 import { StatusDoughnutChart, DepartmentProgressBarChart } from '../components/Charts';
+import { DepartmentLeaderboard } from '../components/DepartmentLeaderboard';
 
 interface TvModePageProps {
   onClose: () => void;
@@ -198,43 +199,12 @@ export const TvModePage: React.FC<TvModePageProps> = ({ onClose }) => {
             </div>
           </div>
 
-          {/* Department Rankings Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {deptProgress
-              .sort((a, b) => b.percentage - a.percentage)
-              .map((dept, index) => (
-                <div
-                  key={dept.id}
-                  className="bg-slate-900/60 rounded-2xl p-4 border border-slate-800 flex items-center justify-between gap-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="w-7 h-7 rounded-lg bg-slate-800 text-blue-400 font-black text-xs flex items-center justify-center border border-slate-700">
-                      {index + 1}
-                    </span>
-                    <div>
-                      <p className="font-bold text-sm text-white">{dept.name}</p>
-                      <p className="text-xs text-slate-400">
-                        ส่งแล้ว {dept.totalSubmitted} จาก {dept.totalTeachers} คน (อนุมัติ {dept.approved})
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <span
-                      className={`text-xl font-black ${
-                        dept.percentage >= 80
-                          ? 'text-emerald-400'
-                          : dept.percentage >= 50
-                          ? 'text-blue-400'
-                          : 'text-orange-400'
-                      }`}
-                    >
-                      {dept.percentage}%
-                    </span>
-                  </div>
-                </div>
-              ))}
-          </div>
+          {/* Department Leaderboard Race with Podium & Confetti */}
+          <DepartmentLeaderboard
+            deptProgress={deptProgress}
+            campaignTitle={selectedCampaign?.title}
+            isDark={true}
+          />
         </div>
       )}
 

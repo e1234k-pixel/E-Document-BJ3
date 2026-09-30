@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import type { Campaign, Submission } from '../types';
+import type { Campaign, Submission, DepartmentProgress } from '../types';
 import { StatusBadge } from '../components/StatusBadge';
 import { UrlChecker } from '../components/UrlChecker';
 import { QrScannerModal } from '../components/QrScannerModal';
 import { SubmissionHistoryModal } from '../components/SubmissionHistoryModal';
+import { DepartmentLeaderboard } from '../components/DepartmentLeaderboard';
+import { Confetti } from '../components/Confetti';
 import {
   FileText,
   Calendar,
@@ -19,13 +21,20 @@ import {
   History,
   Send,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  Trophy,
+  Flame,
+  Award
 } from 'lucide-react';
 
 export const TeacherDashboard: React.FC = () => {
   const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [deptProgress, setDeptProgress] = useState<DepartmentProgress[]>([]);
+  const [activeTab, setActiveTab] = useState<'tasks' | 'leaderboard'>('tasks');
+  const [selectedLeaderboardCampaignId, setSelectedLeaderboardCampaignId] = useState<number>(1);
+  const [showSubmissionConfetti, setShowSubmissionConfetti] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
   // Submit Modal State
@@ -47,12 +56,17 @@ export const TeacherDashboard: React.FC = () => {
     if (!user) return;
     setLoading(true);
     try {
-      const [cList, sList] = await Promise.all([
+      const [cList, sList, dProg] = await Promise.all([
         api.getCampaigns(),
         api.getSubmissions({ user_id: user.id }),
+        api.getDepartmentProgress(selectedLeaderboardCampaignId),
       ]);
       setCampaigns(cList);
       setSubmissions(sList);
+      setDeptProgress(dProg);
+      if (cList.length > 0 && selectedLeaderboardCampaignId === 1 && cList[0].id !== 1) {
+        setSelectedLeaderboardCampaignId(cList[0].id);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -62,7 +76,7 @@ export const TeacherDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, [user?.id]);
+  }, [user?.id, selectedLeaderboardCampaignId]);
 
   // Submission map by campaign id
   const submissionMap = new Map<number, Submission>();
@@ -73,6 +87,15 @@ export const TeacherDashboard: React.FC = () => {
   const submittedCount = submissions.filter((s) => s.status !== 'not_submitted').length;
   const approvedCount = submissions.filter((s) => s.status === 'approved').length;
   const completionPercentage = totalCampaigns > 0 ? Math.round((submittedCount / totalCampaigns) * 100) : 0;
+
+  // Department Ranking calculation
+  const sortedDepts = [...deptProgress].sort((a, b) => {
+    if (b.percentage !== a.percentage) return b.percentage - a.percentage;
+    return b.totalSubmitted - a.totalSubmitted;
+  });
+  const myDeptRankIndex = sortedDepts.findIndex((d) => d.id === user?.department_id);
+  const myDeptRank = myDeptRankIndex !== -1 ? myDeptRankIndex + 1 : null;
+  const myDeptData = deptProgress.find((d) => d.id === user?.department_id);
 
   // Open submit modal
   const handleOpenSubmit = (campaign: Campaign) => {
@@ -116,11 +139,12 @@ export const TeacherDashboard: React.FC = () => {
         submission_type: submissionType,
       });
 
-      setSubmitSuccess('ส่งเอกสารเรียบร้อยแล้ว!');
+      setSubmitSuccess('🎉 ส่งเอกสารเรียบร้อยแล้ว! คะแนนกลุ่มสาระของคุณขยับขึ้นแล้ว!');
+      setShowSubmissionConfetti(true);
       setTimeout(() => {
         setIsSubmitModalOpen(false);
         fetchData();
-      }, 1200);
+      }, 1600);
     } catch (err: any) {
       alert(err.message || 'ส่งเอกสารไม่สำเร็จ');
     } finally {
@@ -129,12 +153,17 @@ export const TeacherDashboard: React.FC = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 relative">
+      {/* Celebration Confetti */}
+      {showSubmissionConfetti && (
+        <Confetti duration={4000} onComplete={() => setShowSubmissionConfetti(false)} />
+      )}
+
       {/* Teacher Profile & Progress Banner */}
       <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
         <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold border border-blue-400/30 mb-2">
               <Sparkles className="w-3.5 h-3.5 text-blue-400" />
@@ -148,28 +177,95 @@ export const TeacherDashboard: React.FC = () => {
             </p>
           </div>
 
-          {/* Progress Card */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 sm:min-w-[220px]">
-            <div className="flex items-center justify-between text-xs font-medium text-blue-200 mb-2">
-              <span>ความสำเร็จของคุณ</span>
-              <span className="font-bold text-white text-sm">{completionPercentage}%</span>
-            </div>
-            <div className="w-full bg-black/30 rounded-full h-2.5 overflow-hidden">
-              <div
-                className="bg-emerald-400 h-2.5 rounded-full transition-all duration-700"
-                style={{ width: `${completionPercentage}%` }}
-              />
-            </div>
-            <div className="flex items-center justify-between text-[11px] text-blue-300 mt-2">
-              <span>ส่งแล้ว {submittedCount} จาก {totalCampaigns} งาน</span>
-              <span>(อนุมัติ {approvedCount})</span>
+          {/* Cards: Personal Progress + Department Rank Pill */}
+          <div className="flex flex-wrap sm:flex-nowrap gap-3 items-stretch">
+            {myDeptRank && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('leaderboard')}
+                className="bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/30 rounded-2xl p-4 text-left transition active:scale-95 flex flex-col justify-between group cursor-pointer min-w-[150px]"
+                title="คลิกเพื่อดูตารางอันดับกลุ่มสาระทั้งหมด"
+              >
+                <div className="flex items-center justify-between text-xs text-amber-200 gap-2 mb-1">
+                  <span className="flex items-center gap-1 font-semibold text-[11px]">
+                    <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                    อันดับกลุ่มสาระ
+                  </span>
+                  <span className="text-[10px] text-amber-300 group-hover:translate-x-0.5 transition-transform">
+                    ดูตาราง ➔
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-1.5 my-1">
+                  <span className="text-2xl font-black text-amber-300">
+                    {myDeptRank === 1 ? '🥇 อันดับ 1' : myDeptRank === 2 ? '🥈 อันดับ 2' : myDeptRank === 3 ? '🥉 อันดับ 3' : `อันดับ ${myDeptRank}`}
+                  </span>
+                </div>
+                <span className="text-[11px] text-amber-200/90 block font-medium truncate">
+                  ส่งแล้ว {myDeptData?.percentage || 0}% ({myDeptData?.totalSubmitted}/{myDeptData?.totalTeachers} ท่าน)
+                </span>
+              </button>
+            )}
+
+            {/* Personal Progress Card */}
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 sm:min-w-[210px] flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs font-medium text-blue-200 mb-2">
+                <span>ความสำเร็จของคุณ</span>
+                <span className="font-bold text-white text-sm">{completionPercentage}%</span>
+              </div>
+              <div className="w-full bg-black/30 rounded-full h-2.5 overflow-hidden">
+                <div
+                  className="bg-emerald-400 h-2.5 rounded-full transition-all duration-700"
+                  style={{ width: `${completionPercentage}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-blue-300 mt-2">
+                <span>ส่งแล้ว {submittedCount} จาก {totalCampaigns} งาน</span>
+                <span>(อนุมัติ {approvedCount})</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Navigation Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+        <button
+          onClick={() => setActiveTab('tasks')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition ${
+            activeTab === 'tasks'
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+              : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          <span>รายการงานที่ต้องส่ง ({campaigns.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('leaderboard')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition ${
+            activeTab === 'leaderboard'
+              ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md shadow-amber-500/20'
+              : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
+          }`}
+        >
+          <Trophy className="w-4 h-4 text-amber-300" />
+          <span>ตารางอันดับกลุ่มสาระ (Leaderboard Race)</span>
+          {myDeptRank && (
+            <span
+              className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
+                activeTab === 'leaderboard' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800'
+              }`}
+            >
+              อันดับ {myDeptRank}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* Campaigns List (Cards) */}
-      <div className="space-y-4">
+      {activeTab === 'tasks' && (
+      <div className="space-y-4 animate-fadeIn">
         <div className="flex items-center justify-between">
           <h2 className="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
             <FileText className="w-5 h-5 text-blue-600" />
@@ -342,8 +438,39 @@ export const TeacherDashboard: React.FC = () => {
           </div>
         )}
       </div>
+      )}
 
-      {/* Submit / Edit Modal */}
+      {/* Department Leaderboard Tab */}
+      {activeTab === 'leaderboard' && (
+        <div className="space-y-4 animate-fadeIn">
+          {campaigns.length > 1 && (
+            <div className="flex items-center justify-between bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm text-xs">
+              <span className="font-semibold text-slate-700">เลือกรอบการประเมิน:</span>
+              <select
+                value={selectedLeaderboardCampaignId}
+                onChange={(e) => {
+                  const cId = Number(e.target.value);
+                  setSelectedLeaderboardCampaignId(cId);
+                  api.getDepartmentProgress(cId).then(setDeptProgress);
+                }}
+                className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white font-bold text-slate-800 focus:outline-none"
+              >
+                {campaigns.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <DepartmentLeaderboard
+            deptProgress={deptProgress}
+            campaignTitle={campaigns.find((c) => c.id === selectedLeaderboardCampaignId)?.title || campaigns[0]?.title}
+            highlightDeptId={user?.department_id}
+          />
+        </div>
+      )}
       {isSubmitModalOpen && selectedCampaign && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">

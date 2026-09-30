@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import type { ExecutiveKPIs, DepartmentProgress, Campaign, MatrixRow } from '../types';
 import { StatusDoughnutChart, DepartmentProgressBarChart, DailySubmissionsLineChart } from '../components/Charts';
+import { DepartmentLeaderboard } from '../components/DepartmentLeaderboard';
 import {
   TrendingUp,
   Users,
@@ -227,84 +228,11 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({ onOpenTv
         </div>
       )}
 
-      {/* Department Progress Table */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden p-6 space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-          <div>
-            <h3 className="font-bold text-base text-slate-900">
-              ตารางสรุปความก้าวหน้ารายกลุ่มสาระการเรียนรู้
-            </h3>
-            <p className="text-xs text-slate-500">
-              จัดอันดับตามเปอร์เซ็นต์ความก้าวหน้าในการส่งเอกสาร
-            </p>
-          </div>
-          <span className="text-xs text-slate-400">{deptProgress.length} กลุ่มสาระ/กิจกรรม</span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
-            <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
-              <tr>
-                <th className="px-4 py-3">กลุ่มสาระการเรียนรู้</th>
-                <th className="px-4 py-3 text-center">ครูทั้งหมด</th>
-                <th className="px-4 py-3 text-center">ส่งแล้ว</th>
-                <th className="px-4 py-3 text-center">อนุมัติแล้ว</th>
-                <th className="px-4 py-3 text-center">ต้องแก้ไข</th>
-                <th className="px-4 py-3 text-center">ยังไม่ส่ง</th>
-                <th className="px-4 py-3 text-right">Progress</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {deptProgress
-                .sort((a, b) => b.percentage - a.percentage)
-                .map((dept) => (
-                  <tr key={dept.id} className="hover:bg-slate-50/70 transition">
-                    <td className="px-4 py-3.5 font-bold text-slate-800">
-                      <div>{dept.name}</div>
-                      <div className="text-[11px] text-slate-400 font-normal">
-                        หัวหน้ากลุ่ม: {dept.head_name || '-'}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 text-center font-medium text-slate-700">
-                      {dept.totalTeachers}
-                    </td>
-                    <td className="px-4 py-3.5 text-center font-bold text-blue-600">
-                      {dept.totalSubmitted}
-                    </td>
-                    <td className="px-4 py-3.5 text-center font-medium text-emerald-600">
-                      {dept.approved}
-                    </td>
-                    <td className="px-4 py-3.5 text-center font-medium text-orange-600">
-                      {dept.revision}
-                    </td>
-                    <td className="px-4 py-3.5 text-center font-medium text-rose-600">
-                      {dept.notSubmitted}
-                    </td>
-                    <td className="px-4 py-3.5 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <div className="w-24 bg-slate-100 rounded-full h-2 overflow-hidden">
-                          <div
-                            className={`h-2 rounded-full ${
-                              dept.percentage >= 80
-                                ? 'bg-emerald-500'
-                                : dept.percentage >= 50
-                                ? 'bg-blue-500'
-                                : 'bg-orange-500'
-                            }`}
-                            style={{ width: `${dept.percentage}%` }}
-                          />
-                        </div>
-                        <span className="font-extrabold text-slate-900 w-10 text-right">
-                          {dept.percentage}%
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Department Leaderboard Race with Podium & Confetti */}
+      <DepartmentLeaderboard
+        deptProgress={deptProgress}
+        campaignTitle={selectedCampaign?.title}
+      />
     </div>
   );
 };
