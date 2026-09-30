@@ -20,6 +20,8 @@ export interface Department {
   name: string;
   code: string;
   head_name?: string;
+  head_user_id?: number | null;
+  teacher_count?: number;
   created_at?: string;
 }
 

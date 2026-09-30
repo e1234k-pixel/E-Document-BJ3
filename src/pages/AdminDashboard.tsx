@@ -64,7 +64,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [departments, setDepartments] = useState<Department[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [userFilterDept, setUserFilterDept] = useState<string>('all');
+  const [userFilterRole, setUserFilterRole] = useState<string>('all');
   const [loading, setLoading] = useState<boolean>(true);
+
+  // Department Modal State (Add / Edit / Appoint Head)
+  const [isDeptModalOpen, setIsDeptModalOpen] = useState<boolean>(false);
+  const [editingDept, setEditingDept] = useState<Department | null>(null);
+  const [deptName, setDeptName] = useState<string>('');
+  const [deptCode, setDeptCode] = useState<string>('');
+  const [deptHeadUserId, setDeptHeadUserId] = useState<string>('');
+  const [isSavingDept, setIsSavingDept] = useState<boolean>(false);
 
   // Single User Modal State (Add / Edit)
   const [isUserModalOpen, setIsUserModalOpen] = useState<boolean>(false);
@@ -226,13 +236,88 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }, []);
 
   // Filtered users
-  const filteredUsers = usersList.filter(
-    (u) =>
-      u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (u.department_name && u.department_name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredUsers = usersList.filter((u) => {
+    if (userFilterDept !== 'all') {
+      if (userFilterDept === 'none') {
+        if (u.department_id) return false;
+      } else {
+        if (String(u.department_id) !== userFilterDept) return false;
+      }
+    }
+    if (userFilterRole !== 'all' && u.role !== userFilterRole) {
+      return false;
+    }
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase();
+      const match =
+        u.name.toLowerCase().includes(q) ||
+        u.username.toLowerCase().includes(q) ||
+        u.role.toLowerCase().includes(q) ||
+        (u.department_name && u.department_name.toLowerCase().includes(q));
+      if (!match) return false;
+    }
+    return true;
+  });
+
+  // Switch to Users tab and filter by department
+  const handleViewDeptTeachers = (deptId: number) => {
+    setUserFilterDept(String(deptId));
+    setUserFilterRole('all');
+    setSearchTerm('');
+    handleSwitchTab('users');
+  };
+
+  // Open Add Department Modal
+  const handleOpenAddDept = () => {
+    setEditingDept(null);
+    setDeptName('');
+    setDeptCode('');
+    setDeptHeadUserId('');
+    setIsDeptModalOpen(true);
+  };
+
+  // Open Edit Department / Appoint Head Modal
+  const handleOpenEditDept = (dept: Department) => {
+    setEditingDept(dept);
+    setDeptName(dept.name);
+    setDeptCode(dept.code);
+    setDeptHeadUserId(dept.head_user_id ? String(dept.head_user_id) : '');
+    setIsDeptModalOpen(true);
+  };
+
+  // Save Department (Add or Edit)
+  const handleSaveDepartment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deptName.trim() || !deptCode.trim()) {
+      alert('กรุณากรอกชื่อกลุ่มสาระและรหัสย่อ');
+      return;
+    }
+
+    setIsSavingDept(true);
+    try {
+      if (editingDept) {
+        await api.updateDepartment(editingDept.id, {
+          name: deptName.trim(),
+          code: deptCode.trim().toUpperCase(),
+          head_user_id: deptHeadUserId ? Number(deptHeadUserId) : null,
+        });
+        alert(`บันทึกข้อมูลและแต่งตั้งหัวหน้ากลุ่มสาระ "${deptName}" เรียบร้อยแล้ว`);
+      } else {
+        await api.createDepartment({
+          name: deptName.trim(),
+          code: deptCode.trim().toUpperCase(),
+          head_user_id: deptHeadUserId ? Number(deptHeadUserId) : null,
+        });
+        alert(`เพิ่มกลุ่มสาระ "${deptName}" เรียบร้อยแล้ว`);
+      }
+      setIsDeptModalOpen(false);
+      await fetchData();
+    } catch (err: any) {
+      alert(err.message || 'ไม่สามารถบันทึกข้อมูลได้');
+    } finally {
+      setIsSavingDept(false);
+    }
+  };
 
   // Open Add Single User Modal
   const handleOpenAddUser = () => {
@@ -583,7 +668,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
-          {activeTab === 'campaigns' ? (
+          {activeTab === 'departments' ? (
+            <button
+              onClick={handleOpenAddDept}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ เพิ่มกลุ่มสาระใหม่</span>
+            </button>
+          ) : activeTab === 'campaigns' ? (
             <button
               onClick={handleOpenAddCamp}
               className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition active:scale-95"
@@ -830,10 +923,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   return (
                     <div
                       key={d.id}
-                      onClick={() => {
-                        setSearchTerm(d.name);
-                        handleSwitchTab('users');
-                      }}
+                      onClick={() => handleViewDeptTeachers(d.id)}
                       className="p-3.5 rounded-2xl border border-slate-200 hover:border-blue-400 hover:shadow-sm cursor-pointer transition bg-slate-50/50"
                     >
                       <div className="flex items-center justify-between">
@@ -860,17 +950,62 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* TAB 1: Users Management */}
       {activeTab === 'users' && (
         <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden p-6 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="relative w-full sm:w-80">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="ค้นหาชื่อ, username, กลุ่มสาระ หรือบทบาท..."
-                className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500"
-              />
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2 flex-1">
+              <div className="relative w-full sm:w-64">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="ค้นหาชื่อ, username..."
+                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Department Filter */}
+              <select
+                value={userFilterDept}
+                onChange={(e) => setUserFilterDept(e.target.value)}
+                className="py-2 px-3 text-xs rounded-xl border border-slate-300 bg-white font-medium text-slate-700 focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">ทุกกลุ่มสาระการเรียนรู้</option>
+                <option value="none">— ไม่สังกัดกลุ่มสาระ —</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name.replace('กลุ่มสาระการเรียนรู้', '')} ({d.code})
+                  </option>
+                ))}
+              </select>
+
+              {/* Role Filter */}
+              <select
+                value={userFilterRole}
+                onChange={(e) => setUserFilterRole(e.target.value)}
+                className="py-2 px-3 text-xs rounded-xl border border-slate-300 bg-white font-medium text-slate-700 focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">ทุกบทบาท</option>
+                <option value="teacher">ครูผู้สอน</option>
+                <option value="department_head">หัวหน้ากลุ่มสาระ</option>
+                <option value="academic">ฝ่ายวิชาการ</option>
+                <option value="executive">ผู้บริหาร</option>
+                <option value="admin">ผู้ดูแลระบบ</option>
+              </select>
+
+              {(userFilterDept !== 'all' || userFilterRole !== 'all' || searchTerm) && (
+                <button
+                  onClick={() => {
+                    setUserFilterDept('all');
+                    setUserFilterRole('all');
+                    setSearchTerm('');
+                  }}
+                  className="text-xs text-rose-600 hover:text-rose-700 font-bold px-2 py-1 underline"
+                >
+                  ล้างตัวกรอง
+                </button>
+              )}
             </div>
+
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500">พบ {filteredUsers.length} บัญชี</span>
             </div>
@@ -1013,16 +1148,122 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {/* TAB 2: Departments */}
       {activeTab === 'departments' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          {departments.map((d) => (
-            <div key={d.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
-              <span className="text-[10px] px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-bold">
-                {d.code}
-              </span>
-              <h3 className="font-bold text-sm text-slate-900 leading-snug">{d.name}</h3>
-              <p className="text-xs text-slate-500">หัวหน้ากลุ่ม: {d.head_name || 'ยังไม่กำหนด'}</p>
+        <div className="space-y-4">
+          {/* Header Bar */}
+          <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-base text-slate-900">
+                  กลุ่มสาระการเรียนรู้ทั้งหมด ({departments.length} กลุ่ม)
+                </h3>
+                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-200">
+                  เชื่อมโยงข้อมูลครูจริง {usersList.filter(u => u.status === 'active' && u.department_id).length} ท่าน
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                รายชื่อกลุ่มสาระ รหัสย่อ จำนวนครูผู้สอนในสังกัด และแต่งตั้งหัวหน้ากลุ่มสาระการเรียนรู้
+              </p>
             </div>
-          ))}
+            <button
+              onClick={handleOpenAddDept}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition active:scale-95 shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ เพิ่มกลุ่มสาระใหม่</span>
+            </button>
+          </div>
+
+          {/* Department Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {departments.map((d) => {
+              const teachersInDept = usersList.filter(u => u.department_id === d.id && u.status === 'active');
+              const headUser = teachersInDept.find(u => u.role === 'department_head');
+              const currentHeadName = headUser ? `${headUser.title || ''}${headUser.name}` : (d.head_name || null);
+              const teacherCount = d.teacher_count ?? teachersInDept.length;
+
+              return (
+                <div
+                  key={d.id}
+                  className="bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-200 p-5 flex flex-col justify-between space-y-4"
+                >
+                  <div className="space-y-3">
+                    {/* Top Row: Code & Count */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black px-2.5 py-1 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 tracking-wider">
+                        {d.code}
+                      </span>
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-slate-500" />
+                        <span>ครูในกลุ่ม {teacherCount} ท่าน</span>
+                      </span>
+                    </div>
+
+                    {/* Department Title */}
+                    <div>
+                      <h4 className="font-bold text-base text-slate-900 leading-snug">
+                        {d.name}
+                      </h4>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        ลำดับที่ {d.id} • โรงเรียนบรรหารแจ่มใสวิทยา 3
+                      </p>
+                    </div>
+
+                    {/* Head of Department Box */}
+                    <div className={`p-3.5 rounded-2xl border transition ${
+                      currentHeadName
+                        ? 'bg-gradient-to-r from-blue-50/70 to-indigo-50/50 border-blue-200'
+                        : 'bg-amber-50/60 border-amber-200'
+                    }`}>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                        หัวหน้ากลุ่มสาระการเรียนรู้
+                      </span>
+                      {currentHeadName ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                            👑
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-900 truncate">
+                              {currentHeadName}
+                            </p>
+                            <span className="text-[10px] text-blue-700 font-semibold">
+                              {headUser?.username ? `@${headUser.username} • ` : ''}ได้รับแต่งตั้งแล้ว
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-amber-800">
+                          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                          <div>
+                            <p className="text-xs font-bold text-amber-900">ยังไม่กำหนดหัวหน้ากลุ่ม</p>
+                            <p className="text-[10px] text-amber-700">กดปุ่มแต่งตั้งเพื่อระบุหัวหน้ากลุ่มสาระ</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Actions Bottom */}
+                  <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
+                    <button
+                      onClick={() => handleViewDeptTeachers(d.id)}
+                      className="flex-1 py-2 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition border border-slate-200"
+                    >
+                      <Users className="w-3.5 h-3.5 text-slate-500" />
+                      <span>ดูรายชื่อครู ({teacherCount})</span>
+                    </button>
+                    <button
+                      onClick={() => handleOpenEditDept(d)}
+                      className="py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center gap-1.5 transition border border-blue-200"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                      <span>แต่งตั้ง/แก้ไข</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -1772,6 +2013,124 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   className="px-5 py-2 font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow transition"
                 >
                   {isSavingCamp ? 'กำลังบันทึก...' : editingCampId ? 'บันทึกการแก้ไข' : 'สร้างรอบการส่ง'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Department Modal (Add / Edit / Appoint Head) */}
+      {isDeptModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
+            <div className="px-6 py-5 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-600/30 text-blue-400 flex items-center justify-center font-bold">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base">
+                    {editingDept ? 'แก้ไขกลุ่มสาระ / แต่งตั้งหัวหน้ากลุ่มสาระ' : 'เพิ่มกลุ่มสาระการเรียนรู้ใหม่'}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    {editingDept ? `รหัสกลุ่มสาระ: ${editingDept.code}` : 'กำหนดข้อมูลกลุ่มสาระและหัวหน้ากลุ่ม'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDeptModalOpen(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveDepartment} className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  ชื่อกลุ่มสาระการเรียนรู้ <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="เช่น กลุ่มสาระการเรียนรู้วิทยาศาสตร์และเทคโนโลยี"
+                  value={deptName}
+                  onChange={(e) => setDeptName(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  รหัสย่อกลุ่มสาระ (Code) <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="เช่น SCI, MATH, THAI, ACT"
+                  value={deptCode}
+                  onChange={(e) => setDeptCode(e.target.value.toUpperCase())}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 uppercase font-mono"
+                />
+                <span className="text-[10px] text-slate-400 mt-1 block">ตัวอักษรภาษาอังกฤษตัวพิมพ์ใหญ่ เช่น SCI, MATH, THAI</span>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                  <span>แต่งตั้งหัวหน้ากลุ่มสาระการเรียนรู้</span>
+                  {deptHeadUserId && (
+                    <span className="text-[10px] text-emerald-600 font-bold">● กำหนดแล้ว</span>
+                  )}
+                </label>
+                <select
+                  value={deptHeadUserId}
+                  onChange={(e) => setDeptHeadUserId(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 bg-white font-medium focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">— ยังไม่กำหนดหัวหน้ากลุ่มสาระ —</option>
+                  {editingDept && (
+                    <optgroup label={`ครูในกลุ่มสาระนี้ (${usersList.filter(u => u.department_id === editingDept.id && u.status === 'active').length} ท่าน)`}>
+                      {usersList
+                        .filter((u) => u.department_id === editingDept.id && u.status === 'active')
+                        .map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.title}{u.name} ({u.username}) {u.role === 'department_head' ? '👑 [หัวหน้ากลุ่มปัจจุบัน]' : ''}
+                          </option>
+                        ))}
+                    </optgroup>
+                  )}
+                  <optgroup label="ครูท่านอื่นในโรงเรียน">
+                    {usersList
+                      .filter((u) => (!editingDept || u.department_id !== editingDept.id) && u.status === 'active' && u.role !== 'admin' && u.role !== 'executive')
+                      .map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.title}{u.name} ({u.department_name || 'ไม่สังกัด'})
+                        </option>
+                      ))}
+                  </optgroup>
+                </select>
+
+                <div className="mt-2.5 p-3 bg-purple-50 border border-purple-200 rounded-xl text-purple-800 text-[11px] leading-relaxed">
+                  💡 <strong>ระบบ 2 ตำแหน่งอัตโนมัติ:</strong> เมื่อแต่งตั้งครูท่านใดเป็นหัวหน้ากลุ่มสาระ ระบบจะปรับบทบาทเป็น <strong>หัวหน้ากลุ่มสาระ (Department Head)</strong> ทันที โดยครูจะสามารถตรวจเอกสารของครูในกลุ่มสาระ และส่งแผนการสอน/วิจัยของตนเองได้ในบัญชีเดียว (ส่งต่อให้วิชาการตรวจ)
+                </div>
+              </div>
+
+              <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsDeptModalOpen(false)}
+                  className="px-4 py-2 font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingDept}
+                  className="px-5 py-2 font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow transition"
+                >
+                  {isSavingDept ? 'กำลังบันทึก...' : editingDept ? 'บันทึกการแต่งตั้ง/แก้ไข' : 'สร้างกลุ่มสาระ'}
                 </button>
               </div>
             </form>

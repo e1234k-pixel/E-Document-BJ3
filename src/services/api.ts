@@ -125,6 +125,32 @@ export const api = {
     return res.json();
   },
 
+  async createDepartment(data: { name: string; code: string; head_user_id?: number | null }): Promise<{ success: boolean; id: number }> {
+    const res = await fetch(`${API_BASE}/departments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err: any = await res.json().catch(() => ({ error: 'ไม่สามารถเพิ่มกลุ่มสาระได้' }));
+      throw new Error(err?.error || 'ไม่สามารถเพิ่มกลุ่มสาระได้');
+    }
+    return res.json();
+  },
+
+  async updateDepartment(id: number, data: { name?: string; code?: string; head_user_id?: number | null }): Promise<{ success: boolean }> {
+    const res = await fetch(`${API_BASE}/departments/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err: any = await res.json().catch(() => ({ error: 'ไม่สามารถบันทึกข้อมูลกลุ่มสาระได้' }));
+      throw new Error(err?.error || 'ไม่สามารถบันทึกข้อมูลกลุ่มสาระได้');
+    }
+    return res.json();
+  },
+
   // Campaigns
   async getCampaigns(): Promise<Campaign[]> {
     const res = await fetch(`${API_BASE}/campaigns`);

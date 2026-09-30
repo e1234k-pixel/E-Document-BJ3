@@ -99,10 +99,127 @@ app.get('/departments', async (c) => {
     if (!db) return c.json([]);
 
     const { results } = await db
-      .prepare('SELECT * FROM departments ORDER BY id ASC')
+      .prepare(`
+        SELECT 
+          d.id, d.name, d.code, d.created_at,
+          COALESCE(
+            (SELECT u.title || u.name FROM users u WHERE u.department_id = d.id AND u.role = 'department_head' AND u.status = 'active' LIMIT 1),
+            d.head_name
+          ) as head_name,
+          (SELECT u.id FROM users u WHERE u.department_id = d.id AND u.role = 'department_head' AND u.status = 'active' LIMIT 1) as head_user_id,
+          (SELECT COUNT(*) FROM users u WHERE u.department_id = d.id AND u.status = 'active') as teacher_count
+        FROM departments d 
+        ORDER BY d.id ASC
+      `)
       .all<Department>();
 
     return c.json(results || []);
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+app.post('/departments', async (c) => {
+  try {
+    const body = await c.req.json();
+    const db = c.env.DB;
+    if (!body.name || !body.code) {
+      return c.json({ error: 'กรุณากรอกชื่อและรหัสย่อกลุ่มสาระ' }, 400);
+    }
+
+    let headName: string | null = null;
+    if (body.head_user_id) {
+      const u = await db
+        .prepare('SELECT id, title, name FROM users WHERE id = ?')
+        .bind(body.head_user_id)
+        .first<{ id: number; title: string; name: string }>();
+      if (u) {
+        headName = `${u.title || ''}${u.name}`;
+      }
+    }
+
+    const res = await db
+      .prepare('INSERT INTO departments (name, code, head_name) VALUES (?, ?, ?)')
+      .bind(body.name.trim(), body.code.trim().toUpperCase(), headName)
+      .run();
+
+    const newDeptId = res.meta.last_row_id;
+
+    if (body.head_user_id && newDeptId) {
+      await db
+        .prepare(`UPDATE users SET department_id = ?, role = 'department_head' WHERE id = ?`)
+        .bind(newDeptId, body.head_user_id)
+        .run();
+    }
+
+    return c.json({ success: true, id: newDeptId });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+app.put('/departments/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json();
+    const db = c.env.DB;
+
+    const dept = await db
+      .prepare('SELECT * FROM departments WHERE id = ?')
+      .bind(id)
+      .first<Department>();
+
+    if (!dept) {
+      return c.json({ error: 'ไม่พบกลุ่มสาระที่ต้องการแก้ไข' }, 404);
+    }
+
+    const name = body.name ? body.name.trim() : dept.name;
+    const code = body.code ? body.code.trim().toUpperCase() : dept.code;
+    let headName: string | null = null;
+
+    if (body.head_user_id !== undefined) {
+      if (body.head_user_id) {
+        const u = await db
+          .prepare('SELECT id, title, name FROM users WHERE id = ?')
+          .bind(body.head_user_id)
+          .first<{ id: number; title: string; name: string }>();
+
+        if (u) {
+          headName = `${u.title || ''}${u.name}`;
+
+          // Revert any other user in this department who is currently department_head to teacher
+          await db
+            .prepare(`UPDATE users SET role = 'teacher' WHERE department_id = ? AND role = 'department_head' AND id != ?`)
+            .bind(id, u.id)
+            .run();
+
+          // Set this user as department_head and ensure department_id is set
+          await db
+            .prepare(`UPDATE users SET role = 'department_head', department_id = ? WHERE id = ?`)
+            .bind(id, u.id)
+            .run();
+        }
+      } else {
+        // Clear department head
+        await db
+          .prepare(`UPDATE users SET role = 'teacher' WHERE department_id = ? AND role = 'department_head'`)
+          .bind(id)
+          .run();
+        headName = null;
+      }
+
+      await db
+        .prepare('UPDATE departments SET name = ?, code = ?, head_name = ? WHERE id = ?')
+        .bind(name, code, headName, id)
+        .run();
+    } else {
+      await db
+        .prepare('UPDATE departments SET name = ?, code = ? WHERE id = ?')
+        .bind(name, code, id)
+        .run();
+    }
+
+    return c.json({ success: true });
   } catch (err: any) {
     return c.json({ error: err.message }, 500);
   }
@@ -607,7 +724,18 @@ app.get('/analytics/department-progress', async (c) => {
 
     const campaignId = c.req.query('campaign_id') || '1';
 
-    const { results: depts } = await db.prepare('SELECT id, name, code, head_name FROM departments ORDER BY id').all<any>();
+    const { results: depts } = await db
+      .prepare(`
+        SELECT 
+          d.id, d.name, d.code,
+          COALESCE(
+            (SELECT u.title || u.name FROM users u WHERE u.department_id = d.id AND u.role = 'department_head' AND u.status = 'active' LIMIT 1),
+            d.head_name
+          ) as head_name
+        FROM departments d 
+        ORDER BY d.id
+      `)
+      .all<any>();
 
     const progressList = [];
 
