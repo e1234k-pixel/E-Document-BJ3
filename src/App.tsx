@@ -88,9 +88,11 @@ const AppContent: React.FC = () => {
 
       // Admin
       case 'admin_dashboard':
+        return <AdminDashboard initialTab="overview" onNavigate={(tab) => setActiveTab(tab)} />;
       case 'admin_users':
+        return <AdminDashboard initialTab="users" onNavigate={(tab) => setActiveTab(tab)} />;
       case 'admin_campaigns':
-        return <AdminDashboard />;
+        return <AdminDashboard initialTab="campaigns" onNavigate={(tab) => setActiveTab(tab)} />;
 
       default:
         // Default to teacher dashboard
